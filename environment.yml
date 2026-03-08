@@ -1,0 +1,6 @@
+name: python-version-3-13-3
+channels:
+  - conda-forge
+dependencies:
+  - pip
+  - python=3.13.3
