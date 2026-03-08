@@ -1,7 +1,7 @@
 # Exposure of T3 in CUTE to Ba-133 in the source tube (between inner lead shield and OVC)
 # Assume source is located 12" above the bottom of the drywell (-20.5 cm in global coordinates)
 /control/alias RUNID {ARG1}
-/control/multiply EVID {RUNID} 100
+/control/multiply EVID {RUNID} 1000
 
 /CDMS/Physics/DMC
 
