@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH --job-name=HV100mm_launch
+#SBATCH --account=rrg-mdiamond
+#SBATCH --output=/scratch/nevenac/slurm/output/%A-%a.log
+#SBATCH --error=/scratch/nevenac/slurm/error/%A-%a.err
+#SBATCH --array=0-9
+#SBATCH --time=20:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --cpus-per-task=21
+#SBATCH --mem-per-cpu=5G
+
+module load scdms/V05-06
+singularity exec $SCDMS_IMAGE CDMS_GGSim /home/nevenac/projects/sourcesim-analysis/simulation_jobs/CUTE-T3_Ba133_12inch_DMC_tuned.mac $SLURM_ARRAY_TASK_ID

@@ -1,0 +1,67 @@
+# Exposure of T3 in CUTE to Ba-133 in the source tube (between inner lead shield and OVC)
+# Assume source is located 12" above the bottom of the drywell (-20.5 cm in global coordinates)
+/control/alias RUNID {ARG1}
+/control/multiply EVID {RUNID} 100
+
+/CDMS/Physics/DMC
+
+# Lab and detector configuration
+/CDMS/Lab NoLab
+/CDMS/Detector cute
+/CDMS/UseShield
+/CDMS/CUTE/Tower snolab
+
+/control/execute {CDMS_SUPERSIM}/CDMSgeometry/macros/CUTE_T3_stack.mac
+
+/CDMS/Stack/UseClamps
+
+# Lattice and E-field
+/CDMS/Zip/UseLattice
+/CDMS/Zip/UseEMField
+/CDMS/Zip/EMField/Voltage 50 V -1
+/CDMS/Zip/TESsubgapAbsorption 0.07 # tuned parameter
+/CDMS/Materials/AddPropertyValue G4_Al absorberEff 0.35  # tuned parameter
+
+# Source configuration
+/CDMS/Source snocap
+/CDMS/SnoCap/Position 15.8 -15.8 -20.5 cm
+/CDMS/SnoCap/AddIsotope 56 133
+
+# sampling settings
+/g4cmp/samplingEnergy 100 eV       # Energy above which to downsample
+/g4cmp/phononBounces 20000         # Maximum phonon reflections
+/g4cmp/combiningStepLength 2 mm    # Combine hits below step length
+
+# production cuts
+# this is the range that a secondary particle must be able to travel, or else its track is not created and its energy is deposited locally instead
+/CDMS/Physics/ApplyProductionCuts true
+/CDMS/Physics/ElectronCut 1 mm
+/CDMS/Physics/PositronCut 1 mm
+/CDMS/Physics/GammaCut 1 mm
+/CDMS/Physics/HadronCut 1e-9 mm
+
+/CDMS/updateGeom
+
+# TESSim settings
+/CDMS/TESSim/Enable
+/CDMS/TESSim/PulseFitter ODE
+/CDMS/TESSim/SetConstant W_gamma 340 J/(m^3*K^2) # tuned parameter
+
+# Data output commands
+/CDMS/writeData false
+/CDMS/writeTrees true
+/CDMS/writeEmptyEvents false  # ignore events that didn't deposit energy in detectors
+/CDMS/writeEmptyHits false    # ignore hits that didn't deposit energy in detectors
+/CDMS/writeDMC false             # phonon hits not recorded in separate txt file
+/CDMS/Output/Root/writeDMC false # phonon hits not recorded in ROOT file
+
+/CDMS/writeFilePrefix /scratch/nevenac/CUTE-T3_Ba133_12inch_DMC_1kevents/CUTE-T3_Ba133_12inch_DMC # better to explicitly put a file path before the name
+
+# Beam commands
+/run/printProgress 3
+/run/numberOfThreads 20
+/run/setRunID {RUNID}
+/run/autoSeed
+/run/setEventID {EVID}
+/run/beamOn 1000
+
