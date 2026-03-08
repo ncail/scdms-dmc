@@ -1,22 +1,18 @@
 """
-Scan output from DMC jobs for critical information such as the number of particle hits, and which detectors they occured in.
+Scan output root files from DMC jobs for critical information such as the number of particle hits, and which detectors they occured in.
+Outputs a table where each root file is labeled by the last three characters in its name (using the macro in this repo, this will be numerical, ranging from 000-009).
 """
 
-# File management
+#!/usr/bin/env python3
+
 import glob
-
-# Vector math
 import numpy as np
+import pandas as pd
 
-# SuperCDMS root file utilities
 from cats.cdataframe import CDataFrame
 
 
 def check_tree(tree_name, files, columns):
-    """
-    Try loading a tree with CDataFrame.
-    Returns dictionary of numpy arrays if successful, otherwise None.
-    """
     try:
         df = CDataFrame(tree_name, files)
         data = df.AsNumpy(columns)
@@ -25,11 +21,17 @@ def check_tree(tree_name, files, columns):
         return None
 
 
+def get_run_id(filepath):
+    """Extract last 3 digits from filename."""
+    name = filepath.split("/")[-1]
+    return name.split("_")[-1].split(".")[0][-3:]
+
+
 def inspect_file(root_file):
 
-    print(f"\n===== {root_file} =====")
+    result = {}
 
-    # ---- Check g4dmcEvents ----
+    # ---- g4dmcEvents ----
     events = check_tree(
         "G4SimDir/g4dmcEvent",
         [root_file],
@@ -37,19 +39,17 @@ def inspect_file(root_file):
     )
 
     if events is None:
-        print("No G4SimDir/g4dmcEvent tree")
+        result["g4dmcEvent_tree_exists"] = "no"
+        result["EventNum_contents"] = ""
+        result["DetNum_values"] = ""
+        result["DetType_values"] = ""
     else:
-        eventnum = events["EventNum"]
-        detnums = np.unique(events["DetNum"])
-        dettypes = np.unique(events["DetType"])
+        result["g4dmcEvent_tree_exists"] = "yes"
+        result["EventNum_contents"] = events["EventNum"]
+        result["DetNum_values"] = list(np.unique(events["DetNum"]))
+        result["DetType_values"] = list(np.unique(events["DetType"]))
 
-        print("G4SimDir/g4dmcEvent present")
-        print("  Contents of EventNum:", eventnum)
-        print("  EventNum length:", len(eventnum))
-        print("  DetNum values:", detnums)
-        print("  DetType values:", dettypes)
-
-    # ---- Check mcevent ----
+    # ---- mcevent ----
     mcevent = check_tree(
         "G4SimDir/mcevent",
         [root_file],
@@ -57,36 +57,38 @@ def inspect_file(root_file):
     )
 
     if mcevent is None:
-        print("No G4SimDir/mcevent tree")
+        result["mcevent_tree_exists"] = "no"
+        result["HitsPerEvent_contents"] = ""
+        # result["HitsPerEvent_mean"] = ""
+        # result["HitsPerEvent_max"] = ""
     else:
         hits = mcevent["HitsPerEvent"]
+        result["mcevent_tree_exists"] = "yes"
+        result["HitsPerEvent_contents"] = hits
+        # result["HitsPerEvent_mean"] = float(np.mean(hits))
+        # result["HitsPerEvent_max"] = int(np.max(hits))
 
-        print("G4SimDir/mcevent present")
-        print(f"  Contains: {hits}")
-        print(f"  Entries: {len(hits)}")
-        print(f"  Mean HitsPerEvent: {np.mean(hits):.3f}")
-        print(f"  Max HitsPerEvent: {np.max(hits)}")
+    return result
 
 
 def main():
 
-    prefix = "/path/to/root/output/files/run_prefix_??????.root"
+    files = sorted(glob.glob("/home/nevenac/scratch/CUTE-T3_Ba133_12inch_DMC_100events/*.root"))
 
-    files = sorted(glob.glob(prefix))
-
-    print(f"Found {len(files)} files")
+    table = {}
 
     for f in files:
-        inspect_file(f)
+        run = get_run_id(f)
+        table[run] = inspect_file(f)
+
+    df = pd.DataFrame(table)
+
+    print("\nSummary table:\n")
+    print(df)
+
+    # Optional: save to CSV
+    # df.to_csv("dmc_hit_summary.csv")
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
