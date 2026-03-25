@@ -8,11 +8,16 @@ Uses uproot for pure-Python ROOT file reading (avoids C++ binding issues).
 
 Usage (Python API):
     viewer = TESTraceViewer(dmc_files)
-    viewer.plot_trace(event_num=0, chan_num=0)
-    viewer.plot_flipped_trace(event_num=0, chan_num=0)
+    events = viewer.get_events_for_detector(det_num=2)  # Get events for detector
+    viewer.plot_trace(event_num=events[0], chan_num=0)
+    viewer.print_detector_summary()  # See detector summary
 
 Command Line:
-    python tes_trace_viewer.py --file-pattern /path/to/dmc/files/*.root [--save-dir /path/to/save/]
+    # See detector summary and which events are in which detectors
+    python tes_trace_viewer.py --file-pattern /path/to/file.root --print-detectors
+    
+    # Plot first trace from detector 2
+    python tes_trace_viewer.py /path/to/file.root --det-num 2 --save-dir /path/to/save/
 """
 
 import logging
@@ -107,9 +112,41 @@ class TESTraceViewer:
                     tree = f['G4SimDir/g4dmcTES']
                     self.trees.append(tree)
             logger.info(f"Successfully loaded {len(self.trees)} tree(s)")
+                
         except Exception as e:
             logger.error(f"Failed to load DMC files: {e}")
             raise
+
+    def get_events_for_detector(self, det_num: int) -> np.ndarray:
+        """
+        Get all EventNums that occurred in a specific detector.
+
+        Parameters
+        ----------
+        det_num : int
+            Detector number
+
+        Returns
+        -------
+        np.ndarray
+            Sorted unique EventNums for this detector
+        """
+        logger.info(f"Finding events for DetNum=={det_num}...")
+        all_event_nums = []
+        
+        for file_path in self.dmc_files:
+            try:
+                with uproot.open(file_path) as f:
+                    event_tree = f['G4SimDir/g4dmcEvent']
+                    det_nums = event_tree['DetNum'].array(library='np')
+                    event_nums = event_tree['EventNum'].array(library='np')
+                    mask = det_nums == det_num
+                    all_event_nums.extend(event_nums[mask])
+            except Exception as e:
+                logger.error(f"Failed to get detector events from {file_path}: {e}")
+                return np.array([])
+        
+        return np.unique(all_event_nums)
 
     def get_trace(
         self, 
@@ -323,6 +360,43 @@ class TESTraceViewer:
         print(f"Unique channels: {unique_channels}")
         print(f"{'='*60}\n")
 
+    def print_detector_summary(self) -> None:
+        """Print which events are in which detectors."""
+        logger.info("Building detector summary...")
+        
+        detector_events = {}
+        
+        # Load g4dmcEvent for all files
+        for file_path in self.dmc_files:
+            try:
+                with uproot.open(file_path) as f:
+                    event_tree = f['G4SimDir/g4dmcEvent']
+                    det_nums = event_tree['DetNum'].array(library='np')
+                    event_nums = event_tree['EventNum'].array(library='np')
+                    
+                    # Group events by detector
+                    for det_num, event_num in zip(det_nums, event_nums):
+                        det_num = int(det_num)
+                        event_num = int(event_num)
+                        if det_num not in detector_events:
+                            detector_events[det_num] = set()
+                        detector_events[det_num].add(event_num)
+            except Exception as e:
+                logger.error(f"Failed to load detector info from {file_path}: {e}")
+                return
+        
+        # Print summary
+        print(f"\n{'='*60}")
+        print(f"Detector Summary")
+        print(f"{'='*60}")
+        
+        for det_num in sorted(detector_events.keys()):
+            events = sorted(detector_events[det_num])
+            print(f"DetNum {det_num}: {len(events)} events")
+            print(f"  Events: {events}")
+        
+        print(f"{'='*60}\n")
+
 
 def main():
     """Load DMC files from command line and visualize traces."""
@@ -336,22 +410,28 @@ Examples:
         """
     )
     
-    parser.add_argument(
-        'file_pattern',
+    parser.add_argument('file_pattern',
         help='Glob pattern for DMC root files (e.g., /path/to/files/*.root)',
         default=None,
         type=str
     )
-    parser.add_argument(
-        '--save-dir',
+    parser.add_argument('--det-num',
+        help='Filter to traces from a specific detector number',
+        default=None,
+        type=int
+    )
+    parser.add_argument('--save-dir',
         help='Directory to save plots as PNG files',
         default=None,
         type=str
     )
-    parser.add_argument(
-        '--no-display',
+    parser.add_argument('--no-display',
         action='store_true',
         help='Do not display plots (only save if --save-dir specified)'
+    )
+    parser.add_argument('--print-detectors',
+        action='store_true',
+        help='Print summary of which events are in which detectors and exit'
     )
     
     args = parser.parse_args()
@@ -370,8 +450,23 @@ Examples:
     # Create viewer
     viewer = TESTraceViewer(dmc_files)
     
+    # Print detector summary
+    if args.print_detectors:
+        viewer.print_detector_summary()
+        return 0
+    
     # View available traces
     viewer.list_available_traces()
+    
+    # Get events to plot
+    events_to_plot = []
+    if args.det_num is not None:
+        # Get all events for this detector
+        events_to_plot = viewer.get_events_for_detector(args.det_num)
+        print(f"Found {len(events_to_plot)} events for DetNum=={args.det_num}: {events_to_plot}")
+    else:
+        # Just plot first event
+        events_to_plot = [0]
     
     # Create save directory if needed
     save_dir = None
@@ -383,12 +478,13 @@ Examples:
     # Plot examples
     show_plots = not args.no_display
     
-    # Plot first trace
+    # Plot first trace from first event
+    event_num = events_to_plot[0]
     save_path = None
     if save_dir:
-        save_path = str(save_dir / 'trace_event0_chan0.png')
+        save_path = str(save_dir / f'trace_event{event_num}_chan0.png')
     viewer.plot_trace(
-        event_num=0, 
+        event_num=event_num, 
         chan_num=0, 
         show=show_plots, 
         save_path=save_path
