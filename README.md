@@ -1,14 +1,9 @@
 Tools for extracting run information from SuperCDMS DMC jobs using CATS as a supporting library 
 
-run notebook on Fir 
-enter apptainer (vscode terminal in remote fir connection)
-module load scdms
-apptainer-shell
-jupyter notebook --no-browser --port=8888
+Combine root files
+hadd combined_test.root *.root
 
-in vscode gui:
-select kernel (top right if notebook file is currently in editor)
-select existing jupyter server
-copy url in terminal output from launching jupyter notebook
-`<enter>` on localhost
+Run mac file
+sbatch submit.slrm
 
+Be sure to specify array in slrm file so that they are unique from other runs if intent on combining later so that eventid is unique 
