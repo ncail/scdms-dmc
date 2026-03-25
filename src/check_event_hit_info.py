@@ -67,7 +67,7 @@ def inspect_file(root_file):
 
 def main():
 
-    files = sorted(glob.glob("/home/nevenac/scratch/CUTE-T3_Ba133_12inch_DMC_10kevents/combined_test.root"))
+    files = sorted(glob.glob("/home/nevenac/scratch/CUTE-T3_Ba133_12inch_DMC_10kevents/combined.root"))
 
     table = {}
 
