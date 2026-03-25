@@ -48,6 +48,7 @@
 /CDMS/TESSim/SetConstant W_gamma 340 J/(m^3*K^2) # tuned parameter
 
 # Data output commands
+# index of EventNum in the output trees will not be complete if writing events/hits is false -- only events that cause hits are labeled starting from zero in EventNum
 /CDMS/writeData false
 /CDMS/writeTrees true
 /CDMS/writeEmptyEvents false  # ignore events that didn't deposit energy in detectors
@@ -55,7 +56,8 @@
 /CDMS/writeDMC false             # phonon hits not recorded in separate txt file
 /CDMS/Output/Root/writeDMC false # phonon hits not recorded in ROOT file
 
-/CDMS/writeFilePrefix /scratch/nevenac/CUTE-T3_Ba133_12inch_DMC_1kevents/CUTE-T3_Ba133_12inch_DMC # better to explicitly put a file path before the name
+# Output file write location, includes filename prefix
+/CDMS/writeFilePrefix /scratch/nevenac/CUTE-T3_Ba133_12inch_DMC_10kevents/CUTE-T3_Ba133_12inch_DMC 
 
 # Beam commands
 /run/printProgress 3
