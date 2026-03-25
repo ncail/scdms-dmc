@@ -10,4 +10,4 @@
 #SBATCH --mem-per-cpu=5G
 
 module load scdms/V05-06
-singularity exec $SCDMS_IMAGE CDMS_GGSim /home/nevenac/projects/sourcesim-analysis/simulation_jobs/CUTE-T3_Ba133_12inch_DMC_tuned.mac $SLURM_ARRAY_TASK_ID
+singularity exec $SCDMS_IMAGE CDMS_GGSim /home/nevenac/projects/scdms-dmc/simulation_jobs/CUTE-T3_Ba133_12inch_DMC_tuned.mac $SLURM_ARRAY_TASK_ID
