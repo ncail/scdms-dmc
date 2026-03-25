@@ -3,8 +3,6 @@ Scan output root files from DMC jobs for critical information such as the number
 Outputs a table where each root file is labeled by the last three characters in its name (using the macro in this repo, this will be numerical, ranging from 000-009).
 """
 
-#!/usr/bin/env python3
-
 import glob
 import numpy as np
 import pandas as pd
@@ -59,21 +57,17 @@ def inspect_file(root_file):
     if mcevent is None:
         result["mcevent_tree_exists"] = "no"
         result["HitsPerEvent_contents"] = ""
-        # result["HitsPerEvent_mean"] = ""
-        # result["HitsPerEvent_max"] = ""
     else:
         hits = mcevent["HitsPerEvent"]
         result["mcevent_tree_exists"] = "yes"
         result["HitsPerEvent_contents"] = hits
-        # result["HitsPerEvent_mean"] = float(np.mean(hits))
-        # result["HitsPerEvent_max"] = int(np.max(hits))
 
     return result
 
 
 def main():
 
-    files = sorted(glob.glob("/home/nevenac/scratch/CUTE-T3_Ba133_12inch_DMC_100events/*.root"))
+    files = sorted(glob.glob("/home/nevenac/scratch/CUTE-T3_Ba133_12inch_DMC_10kevents/combined_test.root"))
 
     table = {}
 
@@ -87,7 +81,7 @@ def main():
     print(df)
 
     # Optional: save to CSV
-    # df.to_csv("dmc_hit_summary.csv")
+    # df.to_csv("/home/nevenac/projects/scdms-dmc/dmc_hit_summary.csv")
 
 
 if __name__ == "__main__":
