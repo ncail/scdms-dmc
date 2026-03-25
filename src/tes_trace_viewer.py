@@ -4,14 +4,15 @@ TES Trace Viewer - Interactive visualization tool for TESSim traces from DMC out
 This tool loads and visualizes raw pulses (DMC Intermediates) from DMC root files.
 Traces are located in: outputfile.root > G4SimDir > g4dmcTES > Trace
 
+Uses uproot for pure-Python ROOT file reading (avoids C++ binding issues).
+
 Usage (Python API):
     viewer = TESTraceViewer(dmc_files)
     viewer.plot_trace(event_num=0, chan_num=0)
     viewer.plot_flipped_trace(event_num=0, chan_num=0)
-    viewer.plot_comparison(event_num=0, chan_num=0, save_path='comparison.png')
 
 Command Line:
-    python tes_trace_viewer.py /path/to/dmc/files/*.root [--save-dir /path/to/save/]
+    python tes_trace_viewer.py --file-pattern /path/to/dmc/files/*.root [--save-dir /path/to/save/]
 """
 
 import logging
@@ -23,10 +24,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-try:
-    from cats.cdataframe import CDataFrame
-except ImportError:
-    raise ImportError("SCDMS CATS package is required. Load scdms module.")
+# CDataFrame is crashing for me when loading the g4dmcTES tree, so using uproot instead for this viewer.
+import uproot
 
 # Configure logging
 logging.basicConfig(
@@ -99,12 +98,15 @@ class TESTraceViewer:
         self.dmc_files = dmc_files if isinstance(dmc_files, list) else [dmc_files]
         logger.info(f"Loading DMC files: {self.dmc_files}")
 
-        # Load pulses from root files
+        # Load trees from root files using uproot
         try:
-            self.pulses = CDataFrame(
-                'G4SimDir/g4dmcTES', 
-                self.dmc_files
-            )
+            logger.info("Loading G4SimDir/g4dmcTES tree from ROOT files...")
+            self.trees = []
+            for file_path in self.dmc_files:
+                with uproot.open(file_path) as f:
+                    tree = f['G4SimDir/g4dmcTES']
+                    self.trees.append(tree)
+            logger.info(f"Successfully loaded {len(self.trees)} tree(s)")
         except Exception as e:
             logger.error(f"Failed to load DMC files: {e}")
             raise
@@ -131,36 +133,48 @@ class TESTraceViewer:
         """
         logger.info(f"Retrieving trace: event={event_num}, channel={chan_num}")
 
-        # Filter for specific event and channel
-        filtered = self.pulses.Filter(f'EventNum=={event_num} & ChanNum=={chan_num}')
-
-        if len(filtered) == 0:
-            raise ValueError(
-                f"No trace found for event {event_num}, channel {chan_num}"
-            )
-
-        # Extract data
-        trace_data = filtered.AsNumpy(['Trace'])['Trace'][0]
-        event_nums = filtered.AsNumpy(['EventNum'])['EventNum'][0]
-        chan_nums = filtered.AsNumpy(['ChanNum'])['ChanNum'][0]
-        chan_names = filtered.AsNumpy(['ChanName'])['ChanName'][0]
-        start = filtered.AsNumpy(['T0'])['T0'][0]
-        width = filtered.AsNumpy(['BinWidth'])['BinWidth'][0]
-
-        # Create time array (in microseconds)
-        num_bins = len(trace_data)
-        time_array = np.arange(
-            start, 
-            width * num_bins + start, 
-            width
-        ) * 1e-6
-
-        return TESTrace(
-            trace_data=trace_data,
-            time_data=time_array,
-            event_num=int(event_nums),
-            chan_num=int(chan_nums),
-            chan_name=chan_names.decode() if isinstance(chan_names, bytes) else chan_names,
+        # Search through all trees for the matching event and channel
+        for tree in self.trees:
+            # Read arrays from tree
+            event_nums = tree['EventNum'].array(library='np')
+            chan_nums = tree['ChanNum'].array(library='np')
+            
+            # Find matching index
+            mask = (event_nums == event_num) & (chan_nums == chan_num)
+            indices = np.where(mask)[0]
+            
+            if len(indices) > 0:
+                idx = indices[0]
+                
+                # Extract data for this entry
+                trace_data = tree['Trace'].array(library='np')[idx]
+                chan_names = tree['ChanName'].array(library='np')[idx]
+                start = tree['T0'].array(library='np')[idx]
+                width = tree['BinWidth'].array(library='np')[idx]
+                
+                # Create time array (in microseconds)
+                num_bins = len(trace_data)
+                time_array = np.arange(
+                    start, 
+                    width * num_bins + start, 
+                    width
+                ) * 1e-6
+                
+                # Handle channel name encoding
+                if isinstance(chan_names, bytes):
+                    chan_names = chan_names.decode()
+                
+                return TESTrace(
+                    trace_data=trace_data,
+                    time_data=time_array,
+                    event_num=event_num,
+                    chan_num=chan_num,
+                    chan_name=str(chan_names),
+                )
+        
+        # Not found in any tree
+        raise ValueError(
+            f"No trace found for event {event_num}, channel {chan_num}"
         )
 
     def plot_trace(
@@ -285,13 +299,21 @@ class TESTraceViewer:
         """Print summary of available traces in the loaded DMC files."""
         logger.info("Fetching trace summary...")
         
-        event_nums = self.pulses.AsNumpy(['EventNum'])['EventNum']
-        chan_nums = self.pulses.AsNumpy(['ChanNum'])['ChanNum']
+        all_event_nums = []
+        all_chan_nums = []
+        
+        # Collect event and channel numbers from all trees
+        for tree in self.trees:
+            all_event_nums.extend(tree['EventNum'].array(library='np'))
+            all_chan_nums.extend(tree['ChanNum'].array(library='np'))
+        
+        all_event_nums = np.array(all_event_nums)
+        all_chan_nums = np.array(all_chan_nums)
 
         # Count unique (EventNum, ChanNum) pairs to get actual number of traces
-        unique_traces = len(np.unique(np.column_stack((event_nums, chan_nums)), axis=0))
-        unique_events = len(np.unique(event_nums))
-        unique_channels = len(np.unique(chan_nums))
+        unique_traces = len(np.unique(np.column_stack((all_event_nums, all_chan_nums)), axis=0))
+        unique_events = len(np.unique(all_event_nums))
+        unique_channels = len(np.unique(all_chan_nums))
 
         print(f"\n{'='*60}")
         print(f"TES Trace Summary")
@@ -316,7 +338,9 @@ Examples:
     
     parser.add_argument(
         'file_pattern',
-        help='Glob pattern for DMC root files (e.g., /path/to/files/*.root)'
+        help='Glob pattern for DMC root files (e.g., /path/to/files/*.root)',
+        default=None,
+        type=str
     )
     parser.add_argument(
         '--save-dir',
@@ -335,13 +359,13 @@ Examples:
     # Load DMC files matching pattern
     # Works for a single root file location as well.
     import glob
-    dmc_files = np.sort(glob.glob(args.file_pattern))
+    dmc_files = sorted(glob.glob(args.file_pattern))
     
     if not dmc_files:
         print(f"Error: No DMC files found matching pattern: {args.file_pattern}")
         return 1
     
-    print(f"Found {len(dmc_files)} DMC files")
+    print(f"Found {len(dmc_files)} DMC file(s)")
     
     # Create viewer
     viewer = TESTraceViewer(dmc_files)
@@ -362,8 +386,13 @@ Examples:
     # Plot first trace
     save_path = None
     if save_dir:
-        save_path = save_dir / 'trace_event0_chan0.png'
-    viewer.plot_trace(event_num=0, chan_num=0, show=show_plots, save_path=str(save_path))
+        save_path = str(save_dir / 'trace_event0_chan0.png')
+    viewer.plot_trace(
+        event_num=0, 
+        chan_num=0, 
+        show=show_plots, 
+        save_path=save_path
+    )
     
     return 0
 
