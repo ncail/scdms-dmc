@@ -32,6 +32,9 @@ from matplotlib.figure import Figure
 # CDataFrame is crashing for me when loading the g4dmcTES tree, so using uproot instead for this viewer.
 import uproot
 
+# Import common DMC output access functions
+from dmc_output_access import load_trace_data, get_events_for_detector, print_detector_summary, get_trace_summary
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -116,37 +119,6 @@ class TESTraceViewer:
         except Exception as e:
             logger.error(f"Failed to load DMC files: {e}")
             raise
-
-    def get_events_for_detector(self, det_num: int) -> np.ndarray:
-        """
-        Get all EventNums that occurred in a specific detector.
-
-        Parameters
-        ----------
-        det_num : int
-            Detector number
-
-        Returns
-        -------
-        np.ndarray
-            Sorted unique EventNums for this detector
-        """
-        logger.info(f"Finding events for DetNum=={det_num}...")
-        all_event_nums = []
-        
-        for file_path in self.dmc_files:
-            try:
-                with uproot.open(file_path) as f:
-                    event_tree = f['G4SimDir/g4dmcEvent']
-                    det_nums = event_tree['DetNum'].array(library='np')
-                    event_nums = event_tree['EventNum'].array(library='np')
-                    mask = det_nums == det_num
-                    all_event_nums.extend(event_nums[mask])
-            except Exception as e:
-                logger.error(f"Failed to get detector events from {file_path}: {e}")
-                return np.array([])
-        
-        return np.unique(all_event_nums)
 
     def get_trace(
         self, 
@@ -336,65 +308,16 @@ class TESTraceViewer:
         """Print summary of available traces in the loaded DMC files."""
         logger.info("Fetching trace summary...")
         
-        all_event_nums = []
-        all_chan_nums = []
+        summary = get_trace_summary(self.dmc_files)
         
-        # Collect event and channel numbers from all trees
-        for tree in self.trees:
-            all_event_nums.extend(tree['EventNum'].array(library='np'))
-            all_chan_nums.extend(tree['ChanNum'].array(library='np'))
-        
-        all_event_nums = np.array(all_event_nums)
-        all_chan_nums = np.array(all_chan_nums)
-
-        # Count unique (EventNum, ChanNum) pairs to get actual number of traces
-        unique_traces = len(np.unique(np.column_stack((all_event_nums, all_chan_nums)), axis=0))
-        unique_events = len(np.unique(all_event_nums))
-        unique_channels = len(np.unique(all_chan_nums))
-
         print(f"\n{'='*60}")
         print(f"TES Trace Summary")
         print(f"{'='*60}")
-        print(f"Total unique traces: {unique_traces}")
-        print(f"Unique events: {unique_events}")
-        print(f"Unique channels: {unique_channels}")
+        print(f"Total unique traces: {summary['total_unique_traces']}")
+        print(f"Unique events: {summary['unique_events']}")
+        print(f"Unique channels: {summary['unique_channels']}")
         print(f"{'='*60}\n")
 
-    def print_detector_summary(self) -> None:
-        """Print which events are in which detectors."""
-        logger.info("Building detector summary...")
-        
-        detector_events = {}
-        
-        # Load g4dmcEvent for all files
-        for file_path in self.dmc_files:
-            try:
-                with uproot.open(file_path) as f:
-                    event_tree = f['G4SimDir/g4dmcEvent']
-                    det_nums = event_tree['DetNum'].array(library='np')
-                    event_nums = event_tree['EventNum'].array(library='np')
-                    
-                    # Group events by detector
-                    for det_num, event_num in zip(det_nums, event_nums):
-                        det_num = int(det_num)
-                        event_num = int(event_num)
-                        if det_num not in detector_events:
-                            detector_events[det_num] = set()
-                        detector_events[det_num].add(event_num)
-            except Exception as e:
-                logger.error(f"Failed to load detector info from {file_path}: {e}")
-                return
-        
-        # Print summary
-        print(f"\n{'='*60}")
-        print(f"Detector Summary")
-        print(f"{'='*60}")
-        
-        for det_num in sorted(detector_events.keys()):
-            events = sorted(detector_events[det_num])
-            print(f"DetNum {det_num}: {len(events)} events")
-            print(f"  Events: {events}")
-        
         print(f"{'='*60}\n")
 
 
@@ -452,7 +375,7 @@ Examples:
     
     # Print detector summary
     if args.print_detectors:
-        viewer.print_detector_summary()
+        print_detector_summary(dmc_files)
         return 0
     
     # View available traces
@@ -462,7 +385,7 @@ Examples:
     events_to_plot = []
     if args.det_num is not None:
         # Get all events for this detector
-        events_to_plot = viewer.get_events_for_detector(args.det_num)
+        events_to_plot = get_events_for_detector(dmc_files, args.det_num)
         print(f"Found {len(events_to_plot)} events for DetNum=={args.det_num}: {events_to_plot}")
     else:
         # Just plot first event
