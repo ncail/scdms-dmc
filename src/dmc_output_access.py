@@ -151,17 +151,15 @@ def inspect_file(file_path: str) -> dict:
     try:
         with uproot.open(file_path) as f:
             hits_tree = f['G4SimDir/g4dmcHits']
-            hits = hits_tree.arrays(['EventNum', 'DetNum', 'DetType'], library='np')
+            hits = hits_tree.arrays(['EventNum', 'DetNum'], library='np')
         result["g4dmcHits_tree_exists"] = "yes"
         result["Hits_EventNum_contents"] = hits["EventNum"]
         result["Hits_DetNum_values"] = list(np.unique(hits["DetNum"]))
-        result["Hits_DetType_values"] = list(np.unique(hits["DetType"]))
     except Exception as e:
         logger.warning(f"Failed to load g4dmcHits: {e}")
         result["g4dmcHits_tree_exists"] = "no"
         result["Hits_EventNum_contents"] = ""
         result["Hits_DetNum_values"] = ""
-        result["Hits_DetType_values"] = ""
 
     # ---- mcevent ----
     try:
