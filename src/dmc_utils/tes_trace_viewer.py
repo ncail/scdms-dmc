@@ -106,6 +106,7 @@ def load_event_traces(
 def plot_event_all_channels_overlay(
     file_path: str,
     event_num: int,
+    det_num: int = None,
     xlim: Tuple[float, float] = (-1, 10),
     normalize: bool = False,
     flip: bool = False,
@@ -117,7 +118,7 @@ def plot_event_all_channels_overlay(
     Plot ALL TES channels for a single event on the same axes.
     """
 
-    data = load_event_traces(file_path, event_num)
+    data = load_event_traces(file_path, event_num, det_num=det_num)
 
     traces = data["Trace"]
     chans = data["ChanNum"]
@@ -162,37 +163,6 @@ def plot_event_all_channels_overlay(
     plt.close(fig)  # important for HPC memory hygiene
 
     return fig
-
-
-# ============================================================
-# HIGH-LEVEL USER API
-# ============================================================
-
-def plot_detector_event(
-    file_path: str,
-    det_num: int,
-    event_index: int = 0,
-):
-    """
-    Convenience function:
-
-    Detector → pick event → plot all channels.
-    """
-    index = get_detector_event_index(file_path)
-
-    if det_num not in index:
-        raise ValueError(f"No detector {det_num} found")
-
-    events = index[det_num]
-
-    if not events:
-        raise ValueError(f"No events for detector {det_num}")
-
-    event_num = events[event_index]
-
-    print(f"Detector {det_num} → Event {event_num}")
-
-    return plot_event_all_channels_overlay(file_path, event_num)
 
 
 # ============================================================

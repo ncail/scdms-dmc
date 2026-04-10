@@ -15,7 +15,6 @@ from .dmc_output_access import (
 from .tes_trace_viewer import (
     get_detector_event_index,
     load_event_traces,
-    plot_detector_event,
     plot_event_all_channels_overlay,
     list_detector_events
 )
@@ -34,7 +33,6 @@ __all__ = [
     "get_g4dmcTES_summary",
     "get_detector_event_index",
     "load_event_traces",
-    "plot_detector_event",
     "plot_event_all_channels_overlay",
     "list_detector_events"
 ]
