@@ -67,7 +67,11 @@ def get_detector_event_index(file_path: str) -> Dict[int, List[int]]:
 # DATA ACCESS LAYER
 # ============================================================
 
-def load_event_traces(file_path: str, event_num: int) -> Dict[str, np.ndarray]:
+def load_event_traces(
+        file_path: str, 
+        event_num: int,
+        det_num: int = None        
+) -> Dict[str, np.ndarray]:
     """
     Load all TES traces for a single g4dmcTES EventNum.
 
@@ -76,17 +80,22 @@ def load_event_traces(file_path: str, event_num: int) -> Dict[str, np.ndarray]:
     with uproot.open(file_path) as f:
         tree = f["G4SimDir/g4dmcTES"]
         data = tree.arrays(
-            ["EventNum", "ChanNum", "Trace", "T0", "BinWidth"],
+            ["EventNum", "DetNum", "ChanNum", "Trace", "T0", "BinWidth", "ChanName"],
             library="np"
         )
 
     mask = data["EventNum"] == event_num
 
+    if det_num is not None:
+        mask &= (data["DetNum"] == det_num)
+
     return {
+        "DetNum": data["DetNum"][mask].astype(int),
         "ChanNum": data["ChanNum"][mask].astype(int),
+        "ChanName": data["ChanName"][mask].astype(str),
         "Trace": data["Trace"][mask],
         "T0": data["T0"][mask],
-        "BinWidth": data["BinWidth"][mask],
+        "BinWidth": data["BinWidth"][mask]
     }
 
 
