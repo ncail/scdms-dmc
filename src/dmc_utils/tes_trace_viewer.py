@@ -1,20 +1,48 @@
 """
-TES Event Viewer
------------------------------
-Minimal, clean interface for working with g4dmcTES ROOT output.
+TES Trace Viewer Package (DMC / g4dmcTES)
 
-Core design:
-    Detector → Events → TES traces → Plot all channels
+This module provides tools for loading, inspecting, and visualizing
+Transition Edge Sensor (TES) traces produced by SuperCDMS SuperSim DMC Tower simulations.
 
-Performs:
-    1. Event indexing per detector
-    2. Event trace loading
-    3. Event-level plotting (all 12 channels)
+It is designed to work with ROOT files produced by SuperSim/TESSim workflows,
+and uses uproot for pure-Python access to avoid C++ ROOT dependencies.
 
-Dependencies:
-    - uproot
-    - numpy
-    - matplotlib
+-----------------------------------------------------------------------
+DATA STRUCTURE OVERVIEW (g4dmcTES)
+-----------------------------------------------------------------------
+
+Each row in the g4dmcTES tree corresponds to a single TES trace:
+
+    EventNum   -> g4dmcEvent identifier
+    DetNum     -> detector identifier
+    ChanNum    -> TES channel index
+    ChanName   -> human-readable channel name
+    Trace      -> waveform (array of current samples)
+    T0         -> time offset (µs scale depends on simulation config)
+    BinWidth   -> sampling interval per bin
+
+A full "event" typically consists of 12 TES channels per detector.
+
+-----------------------------------------------------------------------
+KEY FEATURES
+-----------------------------------------------------------------------
+
+* Load TES traces from SuperSim DMC ROOT files (multi-file support)
+* Filter by EventNum and DetNum
+* Group traces by event
+* Plot individual TES channels
+* Overlay all channels for a single event
+* Normalize and flip traces
+* Save plots to file (HPC-friendly, no GUI required)
+
+-----------------------------------------------------------------------
+NOTES ON DEBUGGING
+-----------------------------------------------------------------------
+
+- Always verify filtering by BOTH EventNum and DetNum
+- BinWidth must be aligned per trace row (do not reuse index after filtering)
+- Use individual trace plots to validate data before overlay visualization
+- x-axis cropping (xlim) can hide valid TES signals if misconfigured
 """
 
 # File system
@@ -51,6 +79,15 @@ def get_detector_event_index(file_path: str) -> Dict[int, List[int]]:
     Map each detector (DetNum) → sorted unique EventNum list.
 
     This is the ONLY grouping logic needed for navigation.
+
+    Example:
+        det_event_dict = get_detector_event_index("my_sim_output.root")
+        # Example det_event_dict: {1: [0, 101, 203, ...], 2: [2, 101, 301, ...], ...}
+
+        for det, events in sorted(det_event_dict.items()):
+                print(f"  Det {det}: {len(events)} events")
+        # Example output: "  Det 1: 22 events
+        #                 "  Det 2: 18 events ...     
     """
     with uproot.open(file_path) as f:
         tree = f["G4SimDir/g4dmcTES"]
@@ -78,6 +115,14 @@ def load_event_traces(
     Load all TES traces for a single g4dmcTES EventNum.
 
     Returns grouped channel data for plotting.
+
+    Example:
+        data = load_event_traces("my_sim_output.root", event_num=101, det_num=1)
+        first_chan_trace = data["Trace"][0]
+        
+        t = np.arange(len(first_chan_trace) * data["BinWidth"][0]
+        plt.plot(t, first_chan_trace)
+        plt.show()
     """
     with uproot.open(file_path) as f:
         tree = f["G4SimDir/g4dmcTES"]
@@ -105,6 +150,28 @@ def load_event_traces(
 # PLOTTING LAYER
 # ============================================================
 
+def _get_trace_t_y(
+    trace: np.ndarray,
+    dt: float,
+    flip: bool = False,
+    normalize: bool = False
+):
+    """
+    Convert a TES trace to time (t) and amplitude (y) arrays for plotting.
+    """
+    t = np.arange(trace.size) * dt * 1e-6
+    y = trace.copy()
+
+    if flip:
+        y = -y
+
+    if normalize:
+        ymin, ymax = y.min(), y.max()
+        y = (y - ymin) / (ymax - ymin + 1e-12)
+
+    return t, y
+
+
 def plot_event_all_channels_overlay(
     file_path: str,
     event_num: int,
@@ -118,6 +185,33 @@ def plot_event_all_channels_overlay(
 ):
     """
     Plot ALL TES channels for a single event on the same axes.
+    Note: Every channel trace from a unique CrystalSim event will have the same EventNum (index). This method filters all traces by EventNum and optionally DetNum, then plots them together in the same figure, labelled by channel.
+
+    Parameters:
+        file_path: Path to simulation ROOT file
+        event_num: EventNum index of the event you want to plot traces for
+        det_num  : Optional DetNum to filter by (if None, plots all detectors' channels for that event)
+        xlim     : Optional tuple (xmin, xmax) to crop x-axis (time) range in microseconds
+        normalize: If True, normalize each trace to [0, 1] for better visual comparison (useful if channels have different offsets or amplitudes)
+        flip     : If True, flip traces vertically (multiply by -1) to match typical TES pulse shapes where signal is negative-going
+        figsize  : Tuple (width, height) in inches for the figure size
+        save_path: Optional path to save the figure (e.g. "myOutput/event101_traces.png"). If None, the figure will not be saved.
+        show     : If True, display the figure using plt.show(). Set to False for HPC environments where GUI is not available.
+
+    Example:
+        # Get indices (EventNum) for Detector 1
+        detector_1_events = get_detector_event_index("my_sim_output.root")[1]
+        event_1 = detector_1_events[0]  # Get the first event for Det 1
+        plot_event_all_channels_overlay(
+            "my_sim_output.root",
+            event_num=event_1,
+            det_num=1,
+            xlim=(25, 50),
+            normalize=True,
+            flip=True,
+            save_path="myOutput/det1_event1_traces.png",
+            show=False
+        )
     """
 
     data = load_event_traces(file_path, event_num, det_num=det_num)
@@ -129,7 +223,7 @@ def plot_event_all_channels_overlay(
     fig, ax = plt.subplots(figsize=figsize)
 
     for i, (trace, chan, dt) in enumerate(zip(traces, chans, dt_all)):
-
+        
         trace = np.asarray(trace)
 
         # Skip empty traces
@@ -137,15 +231,7 @@ def plot_event_all_channels_overlay(
             print(f"Skipping Chan {chan} (all NaN)")
             continue
 
-        t = np.arange(trace.size) * dt * 1e-6
-        y = trace.copy()
-
-        if flip:
-            y = -y
-
-        if normalize:
-            ymin, ymax = y.min(), y.max()
-            y = (y - ymin) / (ymax - ymin + 1e-12)
+        t, y = _get_trace_t_y(trace, dt, flip=flip, normalize=normalize)
 
         ax.plot(t, y, linewidth=1, label=f"Channel {chan}")
 
@@ -173,15 +259,40 @@ def plot_event_all_channels_overlay(
 
 
 def plot_traces_individually(
-    file_path,
-    event_num,
-    det_num=None,
-    normalize=False,
-    flip=False,
-    out_dir="trace_debug"
+    file_path: str,
+    event_num: int,
+    det_num: int = None,
+    normalize: bool = False,
+    flip: bool = False,
+    save_path: str = None
 ):
+    """
+    Plot each TES channel for a single event in its own figure.
+    Note: Every trace from a unique CrystalSim event will have the same EventNum (index). This method filters all traces by EventNum and optionally DetNum, then plots each trace individually, labelled by channel.
+    
+    Parameters:
+        file_path: Path to simulation ROOT file
+        event_num: EventNum index of the event you want to plot traces for
+        det_num  : Optional DetNum to filter by (if None, plots all detectors' channels for that event)
+        normalize: If True, normalize each trace to [0, 1] for better visual comparison (useful if channels have different offsets or amplitudes)
+        flip     : If True, flip traces vertically (multiply by -1) to match typical TES pulse shapes where signal is negative-going
+        save_path: Optional path to save the figure (e.g. "myOutput/event1"). If None, the figure will not be saved. Figures are named "event{event_num}_chan{chan}.png" within the save_path directory.
 
-    os.makedirs(out_dir, exist_ok=True)
+    Example:
+        # Get indices (EventNum) for Detector 2
+        detector_2_events = get_detector_event_index("my_sim_output.root")[2]
+        event_1 = detector_2_events[0]  # Get the first event for Det 2
+        plot_traces_individually(
+            "my_sim_output.root",
+            event_num=event_1,
+            det_num=1,
+            normalize=True,
+            flip=True,
+            save_path="myOutput/det1_event1_traces"
+        )
+    """
+
+    os.makedirs(save_path, exist_ok=True)
 
     data = load_event_traces(file_path, event_num, det_num=det_num)
 
@@ -198,15 +309,7 @@ def plot_traces_individually(
             print(f"Skipping Chan {chan} (all NaN)")
             continue
 
-        t = np.arange(trace.size) * dt * 1e-6
-        y = trace.copy()
-
-        if flip:
-            y = -y
-
-        if normalize:
-            ymin, ymax = y.min(), y.max()
-            y = (y - ymin) / (ymax - ymin + 1e-12)
+        t, y = _get_trace_t_y(trace, dt, flip=flip, normalize=normalize)
 
         fig, ax = plt.subplots(figsize=(8,4))
 
@@ -217,7 +320,7 @@ def plot_traces_individually(
         ax.set_ylabel("Amplitude")
         ax.grid(alpha=0.3)
 
-        save_file = f"{out_dir}/event{event_num}_chan{chan}.png"
+        save_file = f"{save_path}/event{event_num}_chan{chan}.png"
         plt.savefig(save_file, dpi=150)
         plt.close()
 
@@ -230,11 +333,22 @@ def plot_traces_individually(
 
 def list_detector_events(file_path: str) -> None:
     """
-    Print detectors and available events.
+    Print detectors and their available events.
+
+    Example:
+        list_detector_events("my_sim_output.root")
+        # Example output:
+        # Detector -> Event Summary
+        # ===================================================
+        # Det 1: 22 events
+        #    [0, 101, 203, ...]
+        # Det 2: 18 events
+        #    [2, 101, 301, ...]
+        # ===================================================
     """
     index = get_detector_event_index(file_path)
 
-    print("\nDetector → Event Summary")
+    print("\nDetector -> Event Summary")
     print("=" * 40)
 
     for det, events in sorted(index.items()):
