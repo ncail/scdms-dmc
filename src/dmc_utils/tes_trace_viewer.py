@@ -109,7 +109,7 @@ def plot_event_all_channels_overlay(
     file_path: str,
     event_num: int,
     det_num: int = None,
-    xlim: Tuple[float, float] = (-1, 10),
+    xlim: Tuple[float, float] = None,
     normalize: bool = False,
     flip: bool = False,
     figsize: Tuple[int, int] = (10, 6),
@@ -124,35 +124,36 @@ def plot_event_all_channels_overlay(
 
     traces = data["Trace"]
     chans = data["ChanNum"]
-
-    # Filter out all-NaN traces (if any) and keep traces, channels, and binwidths aligned
-    filtered = [
-        (t, c, dt)
-        for t, c, dt in zip(traces, chans, data["BinWidth"])
-        if not np.isnan(t).all()
-    ]
+    dt_all = data["BinWidth"]
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    offset = 1.5
+    for i, (trace, chan, dt) in enumerate(zip(traces, chans, dt_all)):
 
-    for i, (trace, chan, dt) in enumerate(filtered):
+        trace = np.asarray(trace)
 
-        t = np.arange(len(trace)) * dt * 1e-6
+        # Skip empty traces
+        if np.isnan(trace).all():
+            print(f"Skipping Chan {chan} (all NaN)")
+            continue
+
+        t = np.arange(trace.size) * dt * 1e-6
         y = trace.copy()
 
         if flip:
             y = -y
 
         if normalize:
-            y = (y - y.min()) / (y.max() - y.min() + 1e-12)
+            ymin, ymax = y.min(), y.max()
+            y = (y - ymin) / (ymax - ymin + 1e-12)
 
-        ax.plot(t, y + i*offset, label=f"Ch {chan}")
+        ax.plot(t, y, linewidth=1, label=f"Channel {chan}")
 
     ax.set_title(f"TES Event {event_num} (all channels)")
     ax.set_xlabel("Time (µs)")
     ax.set_ylabel("Amplitude")
-    ax.set_xlim(xlim)
+    if xlim is not None:
+        ax.set_xlim(xlim)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=12, ncol=2)
 
