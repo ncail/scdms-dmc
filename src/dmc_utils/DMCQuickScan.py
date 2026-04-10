@@ -1,0 +1,196 @@
+"""
+DMC Quick Scan + TES Trace Sanity Tool
+
+- Validates ROOT outputs
+- Prints detector/event structure
+- Generates TES trace sanity plots
+"""
+
+# File handling
+import glob
+from pathlib import Path
+
+# Class definitions
+from dataclasses import dataclass
+
+# Type hints
+from typing import List, Literal
+
+# Shell process
+import subprocess
+
+# Utils from DMC package
+from dmc_utils import (
+    print_branch_report,
+    get_detector_event_index,
+    plot_event_all_channels_overlay,
+)
+
+
+# ------------------------------------------------------------
+# Configuration object
+# ------------------------------------------------------------
+
+@dataclass
+class ScanConfig:
+    file_pattern: str
+    output_dir: str
+    detector: int = 1
+    flip: bool = True
+    normalize: bool = False
+    xlim: tuple = (25, 50)      # In microseconds, adjust as needed
+    save_all_events: bool = True
+    file_mode: Literal["single", "combined"] = "single"
+    combined_name: str = "combined.root"
+
+
+# ------------------------------------------------------------
+# ROOT file utilities
+# ------------------------------------------------------------
+
+def combine_root_files(
+    input_files: List[str],
+    output_file: str,
+    overwrite: bool = True,
+) -> str:
+    """
+    Combine multiple ROOT files into one using `hadd`.
+
+    This is a thin wrapper around the ROOT CLI tool.
+
+    Parameters
+    ----------
+    input_files : List[str]
+        List of ROOT files to combine.
+    output_file : str
+        Path to output combined ROOT file.
+    overwrite : bool
+        If True, overwrite existing output file.
+
+    Returns
+    -------
+    str
+        Path to combined ROOT file.
+    """
+
+    if not input_files:
+        raise ValueError("No input ROOT files provided.")
+
+    out = Path(output_file)
+
+    if out.exists() and not overwrite:
+        print(f"[combine_root_files] Using existing file: {output_file}")
+        return str(out)
+
+    cmd = ["hadd", "-f" if overwrite else "", output_file, *input_files]
+    cmd = [c for c in cmd if c]  # remove empty flags
+
+    print("[combine_root_files] Running:", " ".join(cmd))
+
+    subprocess.run(cmd, check=True)
+
+    return str(out)
+
+
+# ------------------------------------------------------------
+# Core runner
+# ------------------------------------------------------------
+
+class DMCQuickScan:
+
+    def __init__(self, config: ScanConfig):
+        self.cfg = config
+        self.files = sorted(glob.glob(config.file_pattern))
+
+        if not self.files:
+            raise FileNotFoundError(
+                f"No ROOT files found for pattern: {config.file_pattern}"
+            )
+
+        Path(self.cfg.output_dir).mkdir(parents=True, exist_ok=True)
+
+        # ----------------------------------------------------
+        # File selection logic
+        # ----------------------------------------------------
+        if self.cfg.file_mode == "single":
+            self.file = self.files[0]
+
+        elif self.cfg.file_mode == "combined":
+            self.file = combine_root_files(
+                self.files,
+                str(Path(self.cfg.output_dir) / self.cfg.combined_name),
+            )
+
+        else:
+            raise ValueError(f"Unknown file_mode: {self.cfg.file_mode}")
+
+    # --------------------------------------------------------
+
+    def print_summary(self):
+        print("\n" + "=" * 80)
+        print("DMC SUMMARY")
+        print("=" * 80)
+
+        print_branch_report(self.file)
+
+    # --------------------------------------------------------
+
+    def build_index(self):
+        print("\nLoading detector → event index...")
+        self.index = get_detector_event_index(self.file)
+
+        print("\nDetector -> number of events:")
+        for det, events in sorted(self.index.items()):
+            print(f"  Det {det}: {len(events)} events")
+
+    # --------------------------------------------------------
+
+    def run_sanity_plots(self):
+        det = self.cfg.test_det
+
+        if det not in self.index:
+            print(f"\nDetector {det} not found.")
+            return
+
+        events = self.index[det]
+
+        if not events:
+            print(f"\nNo events for detector {det}.")
+            return
+
+        print(f"\nRunning sanity plots for Det {det}")
+        print(f"Events: {events}")
+
+        for evt in events:
+
+            base = f"det{det}_evt{evt}"
+
+            # --------------------------------------------------
+            # Raw
+            # --------------------------------------------------
+            print(f"Plotting event {evt} (raw)")
+            plot_event_all_channels_overlay(
+                self.file,
+                evt,
+                det_num=det,
+                flip=self.cfg.flip,
+                normalize=False,
+                xlim=self.cfg.xlim,
+                show=False,
+                save_path=str(Path(self.cfg.output_dir) / f"raw_{base}.png"),
+            )
+
+            # --------------------------------------------------
+            # Normalized
+            # --------------------------------------------------
+            print(f"Plotting event {evt} (normalized)")
+            plot_event_all_channels_overlay(
+                self.file,
+                evt,
+                det_num=det,
+                flip=self.cfg.flip,
+                normalize=True,
+                xlim=self.cfg.xlim,
+                show=False,
+                save_path=str(Path(self.cfg.output_dir) / f"norm_{base}.png"),
+            )
