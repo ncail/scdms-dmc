@@ -20,6 +20,11 @@ from .tes_trace_viewer import (
     list_detector_events
 )
 
+from .DMCQuickScan import (
+    DMCQuickScan, 
+    ScanConfig
+)
+
 __all__ = [
     "print_branch_report",
     "get_tree",
@@ -36,5 +41,7 @@ __all__ = [
     "load_event_traces",
     "plot_event_all_channels_overlay",
     "plot_traces_individually",
-    "list_detector_events"
+    "list_detector_events",
+    "DMCQuickScan",
+    "ScanConfig"
 ]
