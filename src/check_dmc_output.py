@@ -31,11 +31,6 @@ def main():
     # --------------------------------------------------------
     path_to_files = "/home/nevenac/scratch/CUTE-T3_Ba133_12inch_DMC_10kevents/combined.root"
 
-    # ---------------------------------------------------------
-    # Trace plot output path
-    # ---------------------------------------------------------
-    output_plot_path = "/home/nevenac/projects/scdms-dmc/output/tes_traces_det2_evt0.png"
-
     files = sorted(glob.glob(path_to_files))
 
     if len(files) == 0:
@@ -70,45 +65,37 @@ def main():
     print(f"Available events: {events}")
 
     # Pick first event
-    test_event = events[1]
+    # test_event = events[0]
 
-    # Plot all traces individually
-    plot_traces_individually(
-        files[0], 
-        test_event, 
-        out_dir=f"/home/nevenac/projects/scdms-dmc/output/indiv_traces_normalized", 
-        det_num=test_det, 
-        flip=True,
-        normalize=True
-    )
-    exit()
+    # ---------------------------------------------------------
+    # Trace plot output path
+    # ---------------------------------------------------------
+    output_plot_path = f"/home/nevenac/projects/scdms-dmc/output/"
 
-    data = load_event_traces(files[0], test_event, det_num=test_det)
+    for evt in events:
+        print(f"\nPlotting EventNum = {evt} (all channels)")
+        plot_event_all_channels_overlay(
+            files[0], 
+            evt, 
+            save_path=f"{output_plot_path}/tes_traces_det{test_det}_evt{evt}.png", 
+            det_num=test_det, 
+            flip=True, 
+            normalize=False, 
+            xlim=(25, 50),      # In microseconds
+            show=False
+        )
 
-    print("n traces:", len(data["Trace"]))
-    print("first trace type:", type(data["Trace"][0]))
-    print("first trace shape:", np.shape(data["Trace"][0]))
-    print("BinWidth unique:", np.unique(data["BinWidth"]))
-    print("T0 unique:", np.unique(data["T0"]))
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    t = np.arange(len(data["Trace"][6])) * data["BinWidth"][6]
-    plt.plot(t, data["Trace"][6])
-    fig.savefig(f"{output_plot_path}_one_channel.png", dpi=300, bbox_inches="tight")
-
-    # exit()
-
-    print(f"\nPlotting EventNum = {test_event} (all channels)")
-    plot_event_all_channels_overlay(
-        files[0], 
-        test_event, 
-        save_path=output_plot_path, 
-        det_num=test_det, 
-        flip=True, 
-        normalize=True, 
-        show=False
-    )
-
+        print(f"\nPlotting EventNum = {evt} (all channels - normalized)")
+        plot_event_all_channels_overlay(
+            files[0], 
+            evt, 
+            save_path=f"{output_plot_path}/tes_traces_normalized_det{test_det}_evt{evt}.png", 
+            det_num=test_det, 
+            flip=True, 
+            normalize=True, 
+            xlim=(25, 50),      # In microseconds
+            show=False
+        )
 
 if __name__ == "__main__":
     main()
