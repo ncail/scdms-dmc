@@ -17,6 +17,8 @@ Dependencies:
     - matplotlib
 """
 
+# File system
+import os
 
 # Array math and manipulation
 import numpy as np
@@ -123,25 +125,29 @@ def plot_event_all_channels_overlay(
     traces = data["Trace"]
     chans = data["ChanNum"]
 
+    # Filter out all-NaN traces (if any) and keep traces, channels, and binwidths aligned
+    filtered = [
+        (t, c, dt)
+        for t, c, dt in zip(traces, chans, data["BinWidth"])
+        if not np.isnan(t).all()
+    ]
+
     fig, ax = plt.subplots(figsize=figsize)
 
-    for i, (trace, chan) in enumerate(zip(traces, chans)):
+    offset = 1.5
 
-        # t0 = data["T0"][i]
-        dt = data["BinWidth"][i]
+    for i, (trace, chan, dt) in enumerate(filtered):
 
         t = np.arange(len(trace)) * dt * 1e-6
-
         y = trace.copy()
 
-        # Optional transforms
         if flip:
             y = -y
 
         if normalize:
-            y = (y - np.min(y)) / (np.max(y) - np.min(y) + 1e-12)
+            y = (y - y.min()) / (y.max() - y.min() + 1e-12)
 
-        ax.plot(t, y, linewidth=1, alpha=0.8, label=f"Ch {chan}")
+        ax.plot(t, y + i*offset, label=f"Ch {chan}")
 
     ax.set_title(f"TES Event {event_num} (all channels)")
     ax.set_xlabel("Time (µs)")
@@ -160,9 +166,61 @@ def plot_event_all_channels_overlay(
     if show:
         plt.show()
 
-    plt.close(fig)  # important for HPC memory hygiene
+    plt.close(fig)  # Important for HPC memory hygiene
 
     return fig
+
+
+def plot_traces_individually(
+    file_path,
+    event_num,
+    det_num=None,
+    normalize=False,
+    flip=False,
+    out_dir="trace_debug"
+):
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    data = load_event_traces(file_path, event_num, det_num=det_num)
+
+    traces = data["Trace"]
+    chans = data["ChanNum"]
+    dt_all = data["BinWidth"]
+
+    for i, (trace, chan, dt) in enumerate(zip(traces, chans, dt_all)):
+
+        trace = np.asarray(trace)
+
+        # Skip empty traces
+        if np.isnan(trace).all():
+            print(f"Skipping Chan {chan} (all NaN)")
+            continue
+
+        t = np.arange(trace.size) * dt * 1e-6
+        y = trace.copy()
+
+        if flip:
+            y = -y
+
+        if normalize:
+            ymin, ymax = y.min(), y.max()
+            y = (y - ymin) / (ymax - ymin + 1e-12)
+
+        fig, ax = plt.subplots(figsize=(8,4))
+
+        ax.plot(t, y, linewidth=1)
+
+        ax.set_title(f"Event {event_num}  |  Channel {chan}")
+        ax.set_xlabel("Time (µs)")
+        ax.set_ylabel("Amplitude")
+        ax.grid(alpha=0.3)
+
+        save_file = f"{out_dir}/event{event_num}_chan{chan}.png"
+        plt.savefig(save_file, dpi=150)
+        plt.close()
+
+        print("Saved:", save_file)
 
 
 # ============================================================

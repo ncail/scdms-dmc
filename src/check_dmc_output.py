@@ -21,6 +21,7 @@ from dmc_utils import (
     print_branch_report,
     get_detector_event_index,
     plot_event_all_channels_overlay,
+    plot_traces_individually,
     load_event_traces
 )
 
@@ -69,7 +70,18 @@ def main():
     print(f"Available events: {events}")
 
     # Pick first event
-    test_event = events[0]
+    test_event = events[1]
+
+    # Plot all traces individually
+    plot_traces_individually(
+        files[0], 
+        test_event, 
+        out_dir=f"/home/nevenac/projects/scdms-dmc/output/indiv_traces_normalized", 
+        det_num=test_det, 
+        flip=True,
+        normalize=True
+    )
+    exit()
 
     data = load_event_traces(files[0], test_event, det_num=test_det)
 
