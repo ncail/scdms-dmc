@@ -71,7 +71,7 @@ def main():
     # Pick first event
     test_event = events[0]
 
-    data = load_event_traces(files[0], test_event)
+    data = load_event_traces(files[0], test_event, det_num=test_det)
 
     print("n traces:", len(data["Trace"]))
     print("first trace type:", type(data["Trace"][0]))
@@ -79,14 +79,23 @@ def main():
     print("BinWidth unique:", np.unique(data["BinWidth"]))
     print("T0 unique:", np.unique(data["T0"]))
 
-    t = np.arange(len(data["Trace"][0])) * data["BinWidth"][0]
-    plt.plot(t, data["Trace"][0])
-    plt.show()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    t = np.arange(len(data["Trace"][6])) * data["BinWidth"][6]
+    plt.plot(t, data["Trace"][6])
+    fig.savefig(f"{output_plot_path}_one_channel.png", dpi=300, bbox_inches="tight")
 
-    exit()
+    # exit()
 
     print(f"\nPlotting EventNum = {test_event} (all channels)")
-    plot_event_all_channels_overlay(files[0], test_event, save_path=output_plot_path)
+    plot_event_all_channels_overlay(
+        files[0], 
+        test_event, 
+        save_path=output_plot_path, 
+        det_num=test_det, 
+        flip=True, 
+        normalize=True, 
+        show=False
+    )
 
 
 if __name__ == "__main__":
