@@ -14,7 +14,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 # Type hints
-from typing import List, Literal
+from typing import Optional, Union, Tuple, List, Literal
 
 # Shell process
 import subprocess
@@ -92,6 +92,44 @@ def combine_root_files(
     return str(out)
 
 
+EventRange = Optional[Union[int, Tuple[int, int]]]
+def resolve_event_range(events: List[int], event_range: EventRange):
+    """
+    Convert user-provided event range into a concrete list of events.
+
+    Parameters
+    ----------
+    events : list[int]
+        Full list of events.
+    event_range :
+        - None -> all events
+        - int -> first N events
+        - (start, stop) -> slice of events
+
+    Returns
+    -------
+    list[int]
+        Selected subset of events.
+    """
+
+    if not events:
+        return []
+
+    if event_range is None:
+        return events
+
+    # first N events
+    if isinstance(event_range, int):
+        return events[:event_range] # Zero-based indexing
+
+    # slice (start, stop)
+    if isinstance(event_range, tuple):
+        start, stop = event_range
+        return events[start:stop]   # Zero-based indexing
+
+    raise ValueError(f"Invalid event_range: {event_range}. Number of events is {len(events)}.")
+
+
 # ------------------------------------------------------------
 # Core runner
 # ------------------------------------------------------------
@@ -145,14 +183,15 @@ class DMCQuickScan:
 
     # --------------------------------------------------------
 
-    def run_sanity_plots(self):
-        det = self.cfg.test_det
+    def run_sanity_plots(self, event_range: EventRange = None):
+        det = self.cfg.detector
 
         if det not in self.index:
             print(f"\nDetector {det} not found.")
             return
 
         events = self.index[det]
+        events = resolve_event_range(events, event_range)
 
         if not events:
             print(f"\nNo events for detector {det}.")
