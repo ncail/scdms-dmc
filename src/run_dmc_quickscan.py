@@ -50,7 +50,6 @@ def main():
         combined_name (str): Name for the combined ROOT file if file_mode is "combined"
         detector     (int) : Detector ID to scan (1-6 for a SuperCDMS Tower)
         flip         (bool): Whether to flip the TES trace plots
-        normalize    (bool): Whether to normalize the TES trace plots
         xlim        (tuple): X-axis limits for the TES trace plots in microseconds (e.g., (25, 50) to focus on the main pulse region)
     """
     config = ScanConfig(
@@ -60,7 +59,6 @@ def main():
         combined_name="run_combined.root",
         detector=2,
         flip=True,
-        normalize=False,
         xlim=(25, 50),
     )
 

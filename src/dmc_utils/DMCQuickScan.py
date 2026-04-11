@@ -37,7 +37,6 @@ class ScanConfig:
     output_dir: str
     detector: int = 1
     flip: bool = True
-    normalize: bool = False
     xlim: tuple = (25, 50)      # In microseconds, adjust as needed
     save_all_events: bool = True
     file_mode: Literal["single", "combined"] = "single"
@@ -174,7 +173,7 @@ class DMCQuickScan:
     # --------------------------------------------------------
 
     def build_index(self):
-        print("\nLoading detector → event index...")
+        print("\nLoading detector -> event index...")
         self.index = get_detector_event_index(self.file)
 
         print("\nDetector -> number of events:")
