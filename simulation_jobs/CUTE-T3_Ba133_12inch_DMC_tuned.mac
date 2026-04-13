@@ -11,7 +11,20 @@
 /CDMS/UseShield
 /CDMS/CUTE/Tower snolab
 
+# /control/execute {CDMS_SUPERSIM}/CDMSgeometry/macros/CUTE_T3_stack.mac
+
+# Error with finding this macro, inputting its commands manually below
+# /control/execute {CDMS_SUPERSIM}/CDMSgeometry/macros/CUTE_T3_DMC.mac
+
+# Begin CUTE_T3_DMC.mac commands
 /control/execute {CDMS_SUPERSIM}/CDMSgeometry/macros/CUTE_T3_stack.mac
+/CDMS/updateGeom
+
+/CDMS/TESSim/SetConstant Tsubst 13.5e-3 K -1
+# End CUTE_T3_DMC.mac commands
+
+# Deactivate 3/4 Ge detectors. Detector 2 (Si), 4 (Ge), 5 (Si) active.
+/CDMS/Layout/ZipInactive 1, 3, 6
 
 /CDMS/Stack/UseClamps
 
@@ -29,6 +42,7 @@
 
 # sampling settings
 /g4cmp/samplingEnergy 100 eV       # Energy above which to downsample
+/g4cmp/maxLukePhonons 50000        # This limits the number of phonons to 50k
 /g4cmp/phononBounces 20000         # Maximum phonon reflections
 /g4cmp/combiningStepLength 2 mm    # Combine hits below step length
 
@@ -51,13 +65,13 @@
 # index of EventNum in the output trees will not be complete if writing events/hits is false -- only events that cause hits are labeled starting from zero in EventNum
 /CDMS/writeData false
 /CDMS/writeTrees true
-/CDMS/writeEmptyEvents false  # ignore events that didn't deposit energy in detectors
-/CDMS/writeEmptyHits false    # ignore hits that didn't deposit energy in detectors
-/CDMS/writeDMC false             # phonon hits not recorded in separate txt file
-/CDMS/Output/Root/writeDMC false # phonon hits not recorded in ROOT file
+/CDMS/writeEmptyEvents false        # ignore events that didn't deposit energy in detectors
+/CDMS/writeEmptyHits false          # ignore hits that didn't deposit energy in detectors
+/CDMS/writeDMC false                # phonon hits not recorded in separate txt file
+/CDMS/Output/Root/writeDMC false    # phonon hits not recorded in ROOT file
 
 # Output file write location, includes filename prefix
-/CDMS/writeFilePrefix /scratch/nevenac/CUTE-T3_Ba133_12inch_DMC_10kevents/CUTE-T3_Ba133_12inch_DMC 
+/CDMS/writeFilePrefix /scratch/nevenac/Si-fix_CUTE-T3_Ba133_12inch_DMC_10kevents/CUTE-T3_Ba133_12inch_DMC 
 
 # Beam commands
 /run/printProgress 3
