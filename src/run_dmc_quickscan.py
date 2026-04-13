@@ -68,8 +68,8 @@ def main():
     # Print to terminal summary of each DMC ROOT branch
     scanner.print_summary()
 
-    # Stores the EventNum indices that registered per detector
-    scanner.build_index()
+    # Prints the TESSim EventNum indices that registered per detector
+    scanner.get_tessim_events()
 
     # Generate TES trace sanity plots for all events in the selected detector (configured above)
     # Each plot is all 12 channel traces for an event. 
@@ -77,7 +77,7 @@ def main():
     #   None: All events that occurred in the detector are looped through and plotted.
     #   int: The first N events that occurred in the detector are plotted (e.g., 10 to plot the first 10 events).
     #   Tuple[int, int]: A range of events to plot (e.g., (0, 10) to plot the first 10 events)
-    scanner.run_sanity_plots(3)
+    # scanner.run_sanity_plots(3)
 
 
 if __name__ == "__main__":
