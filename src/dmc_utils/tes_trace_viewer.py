@@ -71,38 +71,6 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# INDEXING LAYER
-# ============================================================
-
-def get_detector_event_index(file_path: str) -> Dict[int, List[int]]:
-    """
-    Map each detector (DetNum) → sorted unique EventNum list.
-
-    This is the ONLY grouping logic needed for navigation.
-
-    Example:
-        det_event_dict = get_detector_event_index("my_sim_output.root")
-        # Example det_event_dict: {1: [0, 101, 203, ...], 2: [2, 101, 301, ...], ...}
-
-        for det, events in sorted(det_event_dict.items()):
-                print(f"  Det {det}: {len(events)} events")
-        # Example output: "  Det 1: 22 events
-        #                 "  Det 2: 18 events ...     
-    """
-    with uproot.open(file_path) as f:
-        tree = f["G4SimDir/g4dmcTES"]
-        det = tree["DetNum"].array(library="np")
-        evt = tree["EventNum"].array(library="np")
-
-    index = defaultdict(set)
-
-    for d, e in zip(det, evt):
-        index[int(d)].add(int(e))
-
-    return {d: sorted(list(e)) for d, e in index.items()}
-
-
-# ============================================================
 # DATA ACCESS LAYER
 # ============================================================
 
@@ -327,32 +295,3 @@ def plot_traces_individually(
         print("Saved:", save_file)
 
 
-# ============================================================
-# OPTIONAL UTILITY
-# ============================================================
-
-def list_detector_events(file_path: str) -> None:
-    """
-    Print detectors and their available events.
-
-    Example:
-        list_detector_events("my_sim_output.root")
-        # Example output:
-        # Detector -> Event Summary
-        # ===================================================
-        # Det 1: 22 events
-        #    [0, 101, 203, ...]
-        # Det 2: 18 events
-        #    [2, 101, 301, ...]
-        # ===================================================
-    """
-    index = get_detector_event_index(file_path)
-
-    print("\nDetector -> Event Summary")
-    print("=" * 40)
-
-    for det, events in sorted(index.items()):
-        print(f"Det {det}: {len(events)} events")
-        print(f"   {events[:10]}{' ...' if len(events) > 10 else ''}")
-
-    print("=" * 40)
