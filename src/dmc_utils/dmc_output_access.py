@@ -23,9 +23,28 @@ import uproot
 # For providing default keys
 from collections import defaultdict
 
+# Type hints
+from typing import Dict, List, Literal
+
 # Configure logging 
 import logging 
 logger = logging.getLogger(__name__)
+
+
+# -------------------------------------------------------------
+# Define DMC branch names once
+# -------------------------------------------------------------
+DMC_BRANCHES = {
+    "hits": "G4SimDir/g4dmcHits",
+    "tes": "G4SimDir/g4dmcTES",
+    "event": "G4SimDir/g4dmcEvent",
+}
+
+BranchName = Literal[
+    "G4SimDir/g4dmcHits",
+    "G4SimDir/g4dmcTES",
+    "G4SimDir/g4dmcEvent"
+]
 
 
 # -----------------------------------------------------------
@@ -119,7 +138,7 @@ def get_g4dmcTES_tree(file_path: str):
 
 
 # -----------------------------------------------------------
-# Core high-level utilities
+# Detector-event index utilities
 # -----------------------------------------------------------
 
 def compute_events_per_detector(
@@ -128,7 +147,7 @@ def compute_events_per_detector(
         unique: bool = False
     ) -> dict[int, list[int]]:
     """
-    Map each detector to the sorted list of unique events it recorded.
+    Map each detector to the sorted list of unique events it recorded in a returned dictionary.
     
     Example 
     ------- 
@@ -161,6 +180,75 @@ def compute_events_per_detector(
 
         return dict(events)
 
+
+def get_detector_event_index(
+    file_path: str,
+    branch_name: BranchName,
+    unique: bool = True
+) -> Dict[int, List[int]]:
+    """
+    Returns compute_events_per_detector() for the specified branch.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to ROOT file
+    branch_name : BranchName
+        Which branch to read for DetNum and EventNum (e.g. "G4SimDir/g4dmcTES")
+    unique : bool
+        If True, return only unique EventNum per DetNum. If False, return all EventNum occurrences per DetNum, including duplicates (e.g. for TES tree where one DMC event produces 12 traces with the same EventNum).
+
+    Example:
+        det_event_dict = get_detector_event_index("my_sim_output.root", "G4SimDir/g4dmcTES", unique=True)
+        # Example det_event_dict: {1: [0, 101, 203, ...], 2: [2, 101, 301, ...], ...}
+
+        for det, events in sorted(det_event_dict.items()):
+                print(f"  Det {det}: {len(events)} events")
+        # Example output: "  Det 1: 22 events
+        #                 "  Det 2: 18 events ...     
+    """
+    with uproot.open(file_path) as f:
+        tree = f[branch_name]
+        det = tree["DetNum"].array(library="np")
+        evt = tree["EventNum"].array(library="np")
+
+    return compute_events_per_detector(det, evt, unique=unique)
+
+
+def list_detector_events(
+    file_path: str, 
+    branch_name: BranchName,
+    unique: bool = True
+) -> None:
+    """
+    Print detectors and their available events. Formats and displays output from get_detector_event_index() in a readable way.
+
+    Example:
+        list_detector_events("my_sim_output.root", "G4SimDir/g4dmcTES", unique=True)
+        # Example output:
+        # G4SimDir/g4dmcTES Detector -> Event Summary
+        # ===================================================
+        # Det 1: 22 events
+        #    [0, 101, 203, ...]
+        # Det 2: 18 events
+        #    [2, 101, 301, ...]
+        # ===================================================
+    """
+    index = get_detector_event_index(file_path, branch_name, unique=unique)
+
+    print(f"\n{branch_name} Detector -> Event Summary")
+    print("=" * 40)
+
+    for det, events in sorted(index.items()):
+        print(f"Det {det}: {len(events)} events")
+        print(f"   {events[:10]}{' ...' if len(events) > 10 else ''}")
+
+    print("=" * 40)
+
+
+# -----------------------------------------------------------
+# Branch summarization utilities
+# -----------------------------------------------------------
 
 def _summarize_tree(
         file_path: str, 
