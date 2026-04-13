@@ -35,11 +35,13 @@ logger = logging.getLogger(__name__)
 # Define DMC branch names once
 # -------------------------------------------------------------
 DMC_BRANCHES = {
+    "mcevent": "G4SimDir/mcevent",
     "hits": "G4SimDir/g4dmcHits",
     "tes": "G4SimDir/g4dmcTES",
     "event": "G4SimDir/g4dmcEvent",
 }
 
+# Excludes mcevent branch which has a different structure
 BranchName = Literal[
     "G4SimDir/g4dmcHits",
     "G4SimDir/g4dmcTES",
@@ -119,22 +121,22 @@ def get_tree_arrays(
 
 def get_mcevent_tree(file_path: str):
     """Return G4SimDir/mcevent tree."""
-    return get_tree(file_path, "G4SimDir/mcevent")
+    return get_tree(file_path, DMC_BRANCHES["mcevent"])
 
 
 def get_g4dmcHits_tree(file_path: str):
     """Return G4SimDir/g4dmcHits tree."""
-    return get_tree(file_path, "G4SimDir/g4dmcHits")
+    return get_tree(file_path, DMC_BRANCHES["hits"])
 
 
 def get_g4dmcEvent_tree(file_path: str):
     """Return G4SimDir/g4dmcEvent tree."""
-    return get_tree(file_path, "G4SimDir/g4dmcEvent")
+    return get_tree(file_path, DMC_BRANCHES["event"])
 
 
 def get_g4dmcTES_tree(file_path: str):
     """Return G4SimDir/g4dmcTES tree."""
-    return get_tree(file_path, "G4SimDir/g4dmcTES")
+    return get_tree(file_path, DMC_BRANCHES["tes"])
 
 
 # -----------------------------------------------------------
@@ -273,7 +275,10 @@ def _summarize_tree(
             arrays = tree.arrays(branches, library="np")
 
             result["exists"] = True
+
+            # next(iter(arrays.values())) gets the first array in the dictionary, which should have the same length as all other arrays since they come from the same tree.
             result["total_records"] = int(len(next(iter(arrays.values()))))
+            # Equivalent to result["total_records"] = len(arrays[branches[0]])
 
             # Unique counts
             for name, arr in arrays.items():
@@ -311,10 +316,10 @@ def get_mcevent_summary(file_path: str) -> dict:
     try:
         with uproot.open(file_path) as f:
 
-            if "G4SimDir/mcevent" not in f:
+            if DMC_BRANCHES["mcevent"] not in f:
                 return {"exists": False}
 
-            hits = f["G4SimDir/mcevent"]["HitsPerEvent"].array(library="np")
+            hits = f[DMC_BRANCHES["mcevent"]]["HitsPerEvent"].array(library="np")
 
             return {
                 "exists": True,
@@ -328,15 +333,15 @@ def get_mcevent_summary(file_path: str) -> dict:
 
 
 def get_g4dmcHits_summary(file_path: str) -> dict:
-    return _summarize_tree(file_path, "G4SimDir/g4dmcHits", ["EventNum", "DetNum"])
+    return _summarize_tree(file_path, DMC_BRANCHES["hits"], ["EventNum", "DetNum"])
 
 
 def get_g4dmcEvent_summary(file_path: str) -> dict:
-    return _summarize_tree(file_path, "G4SimDir/g4dmcEvent", ["EventNum", "DetNum"])
+    return _summarize_tree(file_path, DMC_BRANCHES["event"], ["EventNum", "DetNum"])
 
 
 def get_g4dmcTES_summary(file_path: str) -> dict:
-    return _summarize_tree(file_path, "G4SimDir/g4dmcTES", ["EventNum", "ChanNum", "DetNum"])
+    return _summarize_tree(file_path, DMC_BRANCHES["tes"], ["EventNum", "ChanNum", "DetNum"])
 
 
 # -----------------------------------------------------------
@@ -358,16 +363,16 @@ def summarize_branch_counts(file_path: str) -> dict:
 # -----------------------------------------------------------
 
 BRANCH_DESCRIPTIONS = {
-    "G4SimDir/mcevent":
+    DMC_BRANCHES["mcevent"]:
         "Monte Carlo Geant4 events. Sum(HitsPerEvent) gives total SourceSim hits.",
 
-    "G4SimDir/g4dmcHits":
+    DMC_BRANCHES["hits"]:
         "Detector hits after hit merging.",
 
-    "G4SimDir/g4dmcEvent":
+    DMC_BRANCHES["event"]:
         "Events passed to CrystalSim; one Geant4 event may produce multiple.",
 
-    "G4SimDir/g4dmcTES":
+    DMC_BRANCHES["tes"]:
         "TESSim trace output per channel."
 }
 
