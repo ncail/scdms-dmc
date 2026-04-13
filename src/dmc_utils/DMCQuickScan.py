@@ -22,7 +22,7 @@ import subprocess
 # Utils from DMC package
 from dmc_utils import (
     print_branch_report,
-    get_detector_event_index,
+    list_detector_events,
     plot_event_all_channels_overlay,
 )
 
@@ -164,21 +164,12 @@ class DMCQuickScan:
     # --------------------------------------------------------
 
     def print_summary(self):
-        print("\n" + "=" * 80)
-        print("DMC SUMMARY")
-        print("=" * 80)
-
         print_branch_report(self.file)
 
     # --------------------------------------------------------
 
-    def build_index(self):
-        print("\nLoading detector -> event index...")
-        self.index = get_detector_event_index(self.file)
-
-        print("\nDetector -> number of events:")
-        for det, events in sorted(self.index.items()):
-            print(f"  Det {det}: {len(events)} events")
+    def get_tessim_events(self):
+        list_detector_events(self.file, branch_name="G4SimDir/g4dmcTES", unique=True)
 
     # --------------------------------------------------------
 
