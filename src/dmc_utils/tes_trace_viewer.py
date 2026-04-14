@@ -185,7 +185,7 @@ def plot_event_all_channels_overlay(
     data = load_event_traces(file_path, event_num, det_num=det_num)
 
     traces = data["Trace"]
-    chans = data["ChanNum"]
+    chans = data["ChanName"]
     dt_all = data["BinWidth"]
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -265,7 +265,7 @@ def plot_traces_individually(
     data = load_event_traces(file_path, event_num, det_num=det_num)
 
     traces = data["Trace"]
-    chans = data["ChanNum"]
+    chans = data["ChanName"]
     dt_all = data["BinWidth"]
 
     for i, (trace, chan, dt) in enumerate(zip(traces, chans, dt_all)):
