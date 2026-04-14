@@ -400,11 +400,15 @@ def print_branch_report(file_path: str) -> None:
             continue
 
         print("  Present: yes")
+
         for k, v in data.items():
+
+            # Special formatting for detector-event index
             if k == "events_per_detector" or k == "unique_events_per_detector":
                 print(f"  {k}:")
                 for det, evts in sorted(v.items()):
                     print(f"    DetNum {det}: {len(evts)} events")
+                    
             # Skip "exists" key, was handled earlier.
             elif k != "exists":
                 print(f"  {k}: {v}")
