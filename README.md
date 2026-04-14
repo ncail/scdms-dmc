@@ -1,5 +1,18 @@
-`run_dmc_quickscan.py` and `dmc_utils` package are tools for scanning SuperCDMS SuperSim DMC output for the number of events per detector and TES traces. This is to check the simulation output has what you want before performing  analysis or scaling up the simulation.
+# SCDMS-DMC
+In this repository, `run_dmc_quickscan.py` and the `dmc_utils` package are tools for scanning SuperCDMS SuperSim DMC output for the number of events per detector and TES traces. This is to check the simulation output has what you want before performing analysis or scaling up the simulation.
 
+---
+
+# Requirements
+- Run in a SuperCDMS module Apptainer container
+   - Python
+   - Python packages:
+      - numpy
+      - uproot
+      - matplotlib
+- Output ROOT files from SuperCDMS SuperSim DMC run
+
+---
 
 # Running `run_dmc_quickscan.py`
 
