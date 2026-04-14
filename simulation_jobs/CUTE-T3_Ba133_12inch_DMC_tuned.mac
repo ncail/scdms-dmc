@@ -1,7 +1,7 @@
 # Exposure of T3 in CUTE to Ba-133 in the source tube (between inner lead shield and OVC)
 # Assume source is located 12" above the bottom of the drywell (-20.5 cm in global coordinates)
 /control/alias RUNID {ARG1}
-/control/multiply EVID {RUNID} 1000
+/control/multiply EVID {RUNID} 10000
 
 /CDMS/Physics/DMC
 
@@ -10,8 +10,6 @@
 /CDMS/Detector cute
 /CDMS/UseShield
 /CDMS/CUTE/Tower snolab
-
-# /control/execute {CDMS_SUPERSIM}/CDMSgeometry/macros/CUTE_T3_stack.mac
 
 # Error with finding this macro, inputting its commands manually below
 # /control/execute {CDMS_SUPERSIM}/CDMSgeometry/macros/CUTE_T3_DMC.mac
@@ -24,7 +22,7 @@
 # End CUTE_T3_DMC.mac commands
 
 # Deactivate 3/4 Ge detectors. Detector 2 (Si), 4 (Ge), 5 (Si) active.
-/CDMS/Layout/ZipInactive 1, 3, 6
+/CDMS/Layout/ZipInactive 1 3 6
 
 /CDMS/Stack/UseClamps
 
@@ -32,8 +30,8 @@
 /CDMS/Zip/UseLattice
 /CDMS/Zip/UseEMField
 /CDMS/Zip/EMField/Voltage 50 V -1
-/CDMS/Zip/TESsubgapAbsorption 0.07 # tuned parameter
-/CDMS/Materials/AddPropertyValue G4_Al absorberEff 0.35  # tuned parameter
+/CDMS/Zip/TESsubgapAbsorption 0.07                          # tuned parameter
+/CDMS/Materials/AddPropertyValue G4_Al absorberEff 0.35     # tuned parameter
 
 # Source configuration
 /CDMS/Source snocap
@@ -59,7 +57,7 @@
 # TESSim settings
 /CDMS/TESSim/Enable
 /CDMS/TESSim/PulseFitter ODE
-/CDMS/TESSim/SetConstant W_gamma 340 J/(m^3*K^2) # tuned parameter
+/CDMS/TESSim/SetConstant W_gamma 340 J/(m^3*K^2)            # tuned parameter
 
 # Data output commands
 # index of EventNum in the output trees will not be complete if writing events/hits is false -- only events that cause hits are labeled starting from zero in EventNum
@@ -71,7 +69,7 @@
 /CDMS/Output/Root/writeDMC false    # phonon hits not recorded in ROOT file
 
 # Output file write location, includes filename prefix
-/CDMS/writeFilePrefix /scratch/nevenac/Si-fix_CUTE-T3_Ba133_12inch_DMC_10kevents/CUTE-T3_Ba133_12inch_DMC 
+/CDMS/writeFilePrefix /scratch/nevenac/CUTE-T3_Ba133_12inch_DMC_1Mevents/CUTE-T3_Ba133_12inch_DMC 
 
 # Beam commands
 /run/printProgress 3
@@ -79,5 +77,5 @@
 /run/setRunID {RUNID}
 /run/autoSeed
 /run/setEventID {EVID}
-/run/beamOn 1000
+/run/beamOn 10000
 
