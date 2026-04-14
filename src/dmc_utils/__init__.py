@@ -15,7 +15,7 @@ from .dmc_output_access import (
 )
 
 from .tes_trace_viewer import (
-    load_event_traces,
+    get_event_traces,
     plot_event_all_channels_overlay,
     plot_traces_individually
 )
@@ -39,7 +39,7 @@ __all__ = [
     "get_g4dmcHits_summary",
     "get_g4dmcEvent_summary",
     "get_g4dmcTES_summary",
-    "load_event_traces",
+    "get_event_traces",
     "plot_event_all_channels_overlay",
     "plot_traces_individually",
     "DMCQuickScan",
