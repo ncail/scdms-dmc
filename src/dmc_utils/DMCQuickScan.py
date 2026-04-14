@@ -45,23 +45,29 @@ class ScanConfig:
 
 
 # ------------------------------------------------------------
-# ROOT file utilities
+# Utilities
 # ------------------------------------------------------------
 
 def combine_root_files(
-    input_files: List[str],
+    inputs: Union[str, List[str]],
     output_file: str,
     overwrite: bool = True,
 ) -> str:
     """
     Combine multiple ROOT files into one using `hadd`.
 
-    This is a thin wrapper around the ROOT CLI tool.
+    The input can be:
+        - a list of ROOT files
+        - a glob pattern (e.g. "/path/*.root")
+        - a directory containing ROOT files
 
     Parameters
     ----------
-    input_files : List[str]
-        List of ROOT files to combine.
+    inputs : str | List[str]
+        ROOT file inputs. Can be:
+        - list of file paths
+        - glob pattern
+        - directory path
     output_file : str
         Path to output combined ROOT file.
     overwrite : bool
@@ -73,22 +79,49 @@ def combine_root_files(
         Path to combined ROOT file.
     """
 
-    if not input_files:
-        raise ValueError("No input ROOT files provided.")
+    # Resolve input files
+    if isinstance(inputs, list):
+        input_files = inputs
 
+    else:
+        # Check if it's a directory or glob pattern
+        p = Path(inputs)
+
+        if p.is_dir():
+            input_files = sorted(str(f) for f in p.glob("*.root"))
+
+        elif "*" in inputs or "?" in inputs:
+            input_files = sorted(glob.glob(inputs))
+
+        else:
+            input_files = [inputs]
+
+    if not input_files:
+        raise ValueError("No ROOT files found to combine.")
+
+    print(f"[combine_root_files] Found {len(input_files)} ROOT files")
+
+    # Output file handling
     out = Path(output_file)
 
     if out.exists() and not overwrite:
         print(f"[combine_root_files] Using existing file: {output_file}")
         return str(out)
 
-    cmd = ["hadd", "-f" if overwrite else "", output_file, *input_files]
-    cmd = [c for c in cmd if c]  # remove empty flags
+    # Run hadd
+    cmd = ["hadd"]
+
+    if overwrite:
+        cmd.append("-f")
+
+    cmd.append(str(output_file))
+    cmd.extend(input_files)
 
     print("[combine_root_files] Running:", " ".join(cmd))
 
     subprocess.run(cmd, check=True)
 
+    # Return path to combined file
     return str(out)
 
 
