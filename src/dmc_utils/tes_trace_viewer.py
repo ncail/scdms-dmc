@@ -71,10 +71,29 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
+# UTILITIES
+# ============================================================
+
+def normalizer(trace: np.ndarray) -> np.ndarray:
+    """
+    Normalize a TES trace to the range [0, 1] using min-max normalization.
+    """
+    min_val = np.min(trace)
+    max_val = np.max(trace)
+    
+    if max_val - min_val == 0:
+        return trace  # Avoid division by zero if all values are the same
+    
+    normalized = (trace - min_val) / (max_val - min_val + 1e-12)
+    
+    return normalized
+
+
+# ============================================================
 # DATA ACCESS LAYER
 # ============================================================
 
-def load_event_traces(
+def get_event_traces(
         file_path: str, 
         event_num: int,
         det_num: int = None        
@@ -85,7 +104,7 @@ def load_event_traces(
     Returns grouped channel data for plotting.
 
     Example:
-        data = load_event_traces("my_sim_output.root", event_num=101, det_num=1)
+        data = get_event_traces("my_sim_output.root", event_num=101, det_num=1)
         first_chan_trace = data["Trace"][0]
         
         t = np.arange(len(first_chan_trace) * data["BinWidth"][0]
@@ -114,6 +133,35 @@ def load_event_traces(
     }
 
 
+def normalize_traces(
+    traces: np.ndarray
+) -> np.ndarray:
+    """
+    Normalize TES traces 
+
+    Example:
+        data = get_event_traces("my_sim_output.root", event_num=101, det_num=1)
+        traces = data["Trace"]
+        normalized_traces = normalize_traces(traces)
+
+        # Plot normalized traces for this detector event
+        t = np.arange(len(first_chan_trace) * data["BinWidth"][0]
+        plt.plot(t, normalized_traces[0])  # Plot first channel as example
+        plt.show()
+    """
+
+    for i, trace in enumerate(traces):
+        trace = np.asarray(trace)
+        
+        if np.isnan(trace).all():
+            continue  # Skip empty traces
+        
+        trace = normalizer(trace)
+        traces[i] = trace
+    
+    return traces
+
+
 # ============================================================
 # PLOTTING LAYER
 # ============================================================
@@ -134,8 +182,7 @@ def _get_trace_t_y(
         y = -y
 
     if normalize:
-        ymin, ymax = y.min(), y.max()
-        y = (y - ymin) / (ymax - ymin + 1e-12)
+        y = normalizer(y)
 
     return t, y
 
@@ -182,7 +229,7 @@ def plot_event_all_channels_overlay(
         )
     """
 
-    data = load_event_traces(file_path, event_num, det_num=det_num)
+    data = get_event_traces(file_path, event_num, det_num=det_num)
 
     traces = data["Trace"]
     chans = data["ChanName"]
@@ -262,7 +309,7 @@ def plot_traces_individually(
 
     os.makedirs(save_path, exist_ok=True)
 
-    data = load_event_traces(file_path, event_num, det_num=det_num)
+    data = get_event_traces(file_path, event_num, det_num=det_num)
 
     traces = data["Trace"]
     chans = data["ChanName"]
