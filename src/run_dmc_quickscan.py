@@ -94,7 +94,7 @@ def parse_args():
         type=float,
         metavar=("XMIN", "XMAX"),
         default=(25, 50),
-        help="Time window in microseconds"
+        help="Time window in microseconds for plotting traces"
     )
 
     parser.add_argument(
@@ -144,9 +144,13 @@ def main():
         xlim=tuple(args.xlim),
     )
 
+    # Load configurations in scanner
     scanner = DMCQuickScan(config)
 
+    # Print DMC branch report
     scanner.print_summary()
+
+    # Get detailed report of TESSim events per detector
     scanner.get_tessim_events()
 
     # Determine event selection
@@ -158,6 +162,7 @@ def main():
     elif args.event_range is not None:
         event_selection = tuple(args.event_range)
 
+    # Plot TES traces for selected events
     scanner.run_sanity_plots(event_selection)
 
 
