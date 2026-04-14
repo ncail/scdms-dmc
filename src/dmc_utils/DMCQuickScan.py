@@ -118,6 +118,17 @@ def resolve_event_range(events: List[int], event_range: EventRange):
     if event_range is None:
         return events
 
+    # Dont fail if user requests more events than available, just return all
+    max_events = len(events)
+    if isinstance(event_range, int) and event_range > max_events:
+        print(f"Requested {event_range} events, but only {max_events} available. Returning all events.")
+        return events
+    if isinstance(event_range, tuple):
+        start, stop = event_range
+        if stop > max_events:
+            print(f"Requested stop index {stop} exceeds available events ({max_events}). Adjusting to {max_events}.")
+            event_range = (start, max_events)
+
     # first N events
     if isinstance(event_range, int):
         return events[:event_range] # Zero-based indexing
