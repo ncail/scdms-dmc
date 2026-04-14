@@ -34,12 +34,22 @@ Example usage:
         --events 10
 """
 
+# CLI argument parsing
 import argparse
 
+# DMC output accessors
 from dmc_utils import (
     DMCQuickScan,
     ScanConfig
 )
+
+# Logging
+import logging
+logger = logging.getLogger()
+from logger import configure_logger
+
+configure_logger()
+
 
 
 def parse_args():
@@ -114,7 +124,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main(args):
     """
     Entry point for DMCQuickScan CLI.
 
@@ -129,8 +139,6 @@ def main():
         flip (bool)        : Whether to flip the TES trace plots 
         xlim (tuple)       : X-axis limits for the TES trace plots in microseconds (e.g., (25, 50) to focus on the main pulse region)
     """
-
-    args = parse_args()
 
     file_mode = "combined" if args.combine else "single"
 
@@ -167,4 +175,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args)
