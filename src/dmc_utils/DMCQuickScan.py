@@ -23,6 +23,7 @@ import subprocess
 from dmc_utils import (
     print_branch_report,
     list_detector_events,
+    get_detector_event_index,
     plot_event_all_channels_overlay,
 )
 
@@ -174,8 +175,15 @@ class DMCQuickScan:
     # --------------------------------------------------------
 
     def run_sanity_plots(self, event_range: EventRange = None):
-        det = self.cfg.detector
+        
+        # Build detector -> events index
+        self.index = get_detector_event_index(
+            self.file, 
+            branch_name="G4SimDir/g4dmcTES", 
+            unique=True
+        )
 
+        det = self.cfg.detector
         if det not in self.index:
             print(f"\nDetector {det} not found.")
             return
