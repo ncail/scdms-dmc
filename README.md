@@ -1,6 +1,17 @@
 # SCDMS-DMC
 In this repository, `run_dmc_quickscan.py` and the `dmc_utils` package are tools for scanning SuperCDMS SuperSim DMC output for the number of events per detector and TES traces. This is to check the simulation output has what you want before performing analysis or scaling up the simulation.
 
+## Intended Use
+
+`DMCQuickScan` is designed for **fast validation of simulation jobs**, helping confirm that:
+
+* events were produced
+* detectors registered hits
+* TES traces are present
+* traces are physically reasonable
+
+It is **not intended for full analysis or reconstruction**, but as a lightweight pre‑analysis diagnostic tool.
+
 ---
 
 # Requirements
@@ -111,6 +122,35 @@ Plots events with indices `[10, 20)`.
 
 Note: indexing starts at **0**.
 
+### Detector
+
+Finally, to select the detector you want to plot traces for, specify its number.
+
+For a single simulated Tower detector stack configuration, there are 6 detectors, numbered 1-6.
+
+In the example simulation macro `simulation_jobs/CUTE-T3_Ba133_12inch_DMC_tuned.mac`, the detectors are arranged by the embedded macro `CDMSgeometry/macros/CUTE_T3_stack.mac` found here: [SuperSim macros - CUTE T3 stack](https://gitlab.com/supercdms/Simulations/supersim/-/blob/137a59df24a3fc5957f385bfb63d12491ddd582a/CDMSgeometry/macros/CUTE_T3_stack.mac) which does:
+
+```bash
+# Stack configuration
+/CDMS/Layout/CrystalName G157 1
+/CDMS/Layout/CrystalName S122 2
+/CDMS/Layout/CrystalName G169 3
+/CDMS/Layout/CrystalName G171 4
+/CDMS/Layout/CrystalName S125 5
+/CDMS/Layout/CrystalName G159 6
+```
+
+**Example:** To check traces from events in Silicon detectors with this configuration, run `run_dmc_quickscan` with
+```bash
+--detector 2
+```
+
+and again with
+
+```bash
+--detector 5
+```
+
 ---
 
 ## Trace Plot Options
@@ -121,7 +161,7 @@ Note: indexing starts at **0**.
 --flip
 ```
 
-Useful if your detector pulses are negative‑going.
+Flips the TES traces to be positive-going.
 
 ### Adjust time window
 
@@ -129,7 +169,7 @@ Useful if your detector pulses are negative‑going.
 --xlim 25 50
 ```
 
-Sets the plot x‑axis window in microseconds.
+Sets the TES trace plot x‑axis window in microseconds. The default (25, 50) is typically goood for centering on the pulse shape.
 
 ---
 
@@ -153,19 +193,6 @@ This will:
 4. Plot TES traces for the first 10 events in detector 3
 
 ---
-
-## Intended Use
-
-`DMCQuickScan` is designed for **fast validation of simulation jobs**, helping confirm that:
-
-* events were produced
-* detectors registered hits
-* TES traces are present
-* traces are physically reasonable
-
-It is **not intended for full analysis or reconstruction**, but as a lightweight pre‑analysis diagnostic tool.
-
-
 
 # DMC Branch Report Documentation
 
