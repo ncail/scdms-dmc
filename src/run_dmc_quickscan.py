@@ -46,10 +46,6 @@ from dmc_utils import (
 # Logging
 import logging
 logger = logging.getLogger()
-from logger import configure_logger
-
-configure_logger()
-
 
 
 def parse_args():
