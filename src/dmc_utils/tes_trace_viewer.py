@@ -89,6 +89,34 @@ def normalizer(trace: np.ndarray) -> np.ndarray:
     return normalized
 
 
+def build_cut_string(
+        events: int | List[int], 
+        det_num: int = None
+) -> str:
+    """
+    Build an uproot cut expression for filtering a tree by DetNum-EventNum indices.
+
+    Example usage:
+        cut_str = build_cut_string(events=[1, 5, 10], det_num=2)
+        # Result: "(DetNum == 2) & ((EventNum == 1) | (EventNum == 5) | (EventNum == 10))"
+        data = myTree.arrays(
+            ["Trace", "ChanNum", "T0", "BinWidth"], 
+            cut=cut_str, 
+            library="np"
+        )
+    """
+    if isinstance(events, int):
+        cut_str = f"EventNum == {events}"
+    else:
+        events = list(events)
+        cut_str = " | ".join(f"(EventNum == {e})" for e in events)
+
+    if det_num is not None:
+        cut_str = f"(DetNum == {det_num}) & ({cut_str})"
+
+    return cut_str
+
+
 # ============================================================
 # DATA ACCESS LAYER
 # ============================================================
@@ -111,25 +139,30 @@ def get_event_traces(
         plt.plot(t, first_chan_trace)
         plt.show()
     """
+    
     with uproot.open(file_path) as f:
         tree = f["G4SimDir/g4dmcTES"]
+
+        # Get meta info first, small and fast, to find indices of relevant entries
+        meta = tree.arrays(["EventNum", "DetNum"], library="np")
+
+        mask = (meta["EventNum"] == event_num) & (meta["DetNum"] == det_num)
+        entries = np.where(mask)[0]
+
+        # Load only this slice of the trace data
         data = tree.arrays(
-            ["EventNum", "DetNum", "ChanNum", "Trace", "T0", "BinWidth", "ChanName"],
+            ["Trace", "ChanNum", "ChanName", "T0", "BinWidth"],
+            entry_start=entries.min(),
+            entry_stop=entries.max() + 1,
             library="np"
         )
 
-    mask = data["EventNum"] == event_num
-
-    if det_num is not None:
-        mask &= (data["DetNum"] == det_num)
-
     return {
-        "DetNum": data["DetNum"][mask].astype(int),
-        "ChanNum": data["ChanNum"][mask].astype(int),
-        "ChanName": data["ChanName"][mask].astype(str),
-        "Trace": data["Trace"][mask],
-        "T0": data["T0"][mask],
-        "BinWidth": data["BinWidth"][mask]
+        "ChanNum": data["ChanNum"].astype(int),
+        "ChanName": data["ChanName"].astype(str),
+        "Trace": data["Trace"],
+        "T0": data["T0"],
+        "BinWidth": data["BinWidth"]
     }
 
 
