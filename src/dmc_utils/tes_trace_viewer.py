@@ -166,6 +166,30 @@ def get_event_traces(
     }
 
 
+def get_traces_for_events(
+    file_path: str,
+    events: int | List[int],
+    det_num: int = None
+) -> Dict[int, Dict[str, np.ndarray]]:
+    """
+    Load TES traces for multiple events, grouped by EventNum.
+
+    Example:
+        event_nums = [101, 102, 103]
+        data = get_traces_for_events("my_sim_output.root", event_nums, det_num=1)
+        # data is a dict: {101: {"Trace": [...], "ChanNum": [...], ...}, 102: {...}, ...}
+    """
+    if isinstance(events, int):
+        events = [events]
+
+    all_data = {}
+
+    for evt in events:
+        all_data[evt] = get_event_traces(file_path, evt, det_num=det_num)
+
+    return all_data
+
+
 def normalize_traces(
     traces: np.ndarray
 ) -> np.ndarray:
