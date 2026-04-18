@@ -151,13 +151,15 @@ def get_event_traces(
 
         # Load only this slice of the trace data
         data = tree.arrays(
-            ["Trace", "ChanNum", "ChanName", "T0", "BinWidth"],
+            ["EventNum", "DetNum", "Trace", "ChanNum", "ChanName", "T0", "BinWidth"],
             entry_start=entries.min(),
             entry_stop=entries.max() + 1,
             library="np"
         )
 
     return {
+        "EventNum": data["EventNum"].astype(int),
+        "DetNum": data["DetNum"].astype(int),
         "ChanNum": data["ChanNum"].astype(int),
         "ChanName": data["ChanName"].astype(str),
         "Trace": data["Trace"],
