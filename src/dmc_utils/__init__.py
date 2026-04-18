@@ -21,7 +21,8 @@ from .tes_trace_viewer import (
     plot_traces_individually,
     build_cut_string,
     normalize_traces,
-    flip_traces
+    flip_traces,
+    baseline_correct
 )
 
 from .DMCQuickScan import (
@@ -49,6 +50,7 @@ __all__ = [
     "plot_traces_individually",
     "build_cut_string",
     "normalize_traces",
+    "baseline_correct",
     "flip_traces",
     "DMCQuickScan",
     "ScanConfig"

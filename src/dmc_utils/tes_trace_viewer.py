@@ -236,6 +236,12 @@ def flip_traces(
     return traces
 
 
+def baseline_correct(trace, n=500):
+    trace = np.asarray(trace)
+    baseline = np.mean(trace[:n])
+    return trace - baseline
+
+
 # ============================================================
 # PLOTTING LAYER
 # ============================================================
