@@ -258,7 +258,7 @@ class DMCQuickScan:
                 normalize=False,
                 xlim=self.cfg.xlim,
                 show=False,
-                save_path=str(Path(self.cfg.output_dir) / f"raw_{base}.png"),
+                save_path=str(Path(self.cfg.output_dir) / "quickscan_plots" / f"raw_{base}.png"),
             )
 
             # --------------------------------------------------
