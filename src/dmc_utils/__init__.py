@@ -20,7 +20,8 @@ from .tes_trace_viewer import (
     plot_event_all_channels_overlay,
     plot_traces_individually,
     build_cut_string,
-    normalize_traces
+    normalize_traces,
+    flip_traces
 )
 
 from .DMCQuickScan import (
@@ -48,6 +49,7 @@ __all__ = [
     "plot_traces_individually",
     "build_cut_string",
     "normalize_traces",
+    "flip_traces",
     "DMCQuickScan",
     "ScanConfig"
 ]
