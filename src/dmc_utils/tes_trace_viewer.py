@@ -221,6 +221,21 @@ def normalize_traces(
     return traces
 
 
+def flip_traces(
+    traces: np.ndarray      
+) -> np.ndarray:
+    for i, trace in enumerate(traces):
+        trace = np.asarray(trace)
+        
+        if np.isnan(trace).all():
+            continue  # Skip empty traces
+        
+        trace = -trace
+        traces[i] = trace
+    
+    return traces
+
+
 # ============================================================
 # PLOTTING LAYER
 # ============================================================
