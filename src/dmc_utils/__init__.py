@@ -17,7 +17,8 @@ from .dmc_output_access import (
 from .tes_trace_viewer import (
     get_event_traces,
     plot_event_all_channels_overlay,
-    plot_traces_individually
+    plot_traces_individually,
+    build_cut_string
 )
 
 from .DMCQuickScan import (
@@ -42,6 +43,7 @@ __all__ = [
     "get_event_traces",
     "plot_event_all_channels_overlay",
     "plot_traces_individually",
+    "build_cut_string",
     "DMCQuickScan",
     "ScanConfig"
 ]
