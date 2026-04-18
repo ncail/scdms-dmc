@@ -145,7 +145,7 @@ def main(args):
         combined_name=args.combined_name,
         detector=args.detector,
         flip=args.flip,
-        xlim=tuple(args.xlim),
+        xlim=tuple(args.xlim)
     )
 
     # Load configurations in scanner
