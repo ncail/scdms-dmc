@@ -224,6 +224,7 @@ def list_detector_events(
 ) -> None:
     """
     Print detectors and their available events. Formats and displays output from get_detector_event_index() in a readable way.
+    Returns the index for further use if needed by the user.
 
     Example:
         list_detector_events("my_sim_output.root", "G4SimDir/g4dmcTES", unique=True)
@@ -246,6 +247,8 @@ def list_detector_events(
         print(f"   {events[:10]}{' ...' if len(events) > 10 else ''}")
 
     print("=" * 40)
+    
+    return index
 
 
 # -----------------------------------------------------------
