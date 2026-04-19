@@ -52,6 +52,40 @@ BranchName = Literal[
 # -----------------------------------------------------------
 # Low-level tree accessors
 # -----------------------------------------------------------
+def build_cut_string(
+        events: int | List[int], 
+        dets: int | List[int] = None
+) -> str:
+    """
+    Build an uproot cut expression for filtering a tree by DetNum-EventNum indices.
+
+    Example usage:
+        cut_str = build_cut_string(events=[1, 5, 10], dets=2)
+        # Result: "(DetNum == 2) & ((EventNum == 1) | (EventNum == 5) | (EventNum == 10))"
+        data = myTree.arrays(
+            ["Trace", "ChanNum", "T0", "BinWidth"], 
+            cut=cut_str, 
+            library="np"
+        )
+    """
+    if isinstance(events, int):
+        evt_str = f"EventNum == {events}"
+    else:
+        events = list(events)
+        evt_str = " | ".join(f"(EventNum == {e})" for e in events)
+
+    if dets is not None:
+        if isinstance(dets, int):
+            det_str = f"DetNum == {dets}"
+        else:
+            dets = list(dets)
+            det_str = " | ".join(f"(DetNum == {d})" for d in dets)
+    
+    cut_str = f"({det_str}) & ({evt_str})"
+
+    return cut_str
+
+
 def get_tree(file_path: str, tree_name: str):
     """
     Return a ROOT tree object from the file.

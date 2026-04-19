@@ -54,6 +54,7 @@ import numpy as np
 # Root file handling
 import uproot
 from cats.cdataframe import CDataFrame
+from .dmc_output_access import build_cut_string
 
 # For providing default keys
 from collections import defaultdict
@@ -88,34 +89,6 @@ def normalizer(trace: np.ndarray) -> np.ndarray:
     normalized = (trace - min_val) / (max_val - min_val + 1e-12)
     
     return normalized
-
-
-def build_cut_string(
-        events: int | List[int], 
-        det_num: int = None
-) -> str:
-    """
-    Build an uproot cut expression for filtering a tree by DetNum-EventNum indices.
-
-    Example usage:
-        cut_str = build_cut_string(events=[1, 5, 10], det_num=2)
-        # Result: "(DetNum == 2) & ((EventNum == 1) | (EventNum == 5) | (EventNum == 10))"
-        data = myTree.arrays(
-            ["Trace", "ChanNum", "T0", "BinWidth"], 
-            cut=cut_str, 
-            library="np"
-        )
-    """
-    if isinstance(events, int):
-        cut_str = f"EventNum == {events}"
-    else:
-        events = list(events)
-        cut_str = " | ".join(f"(EventNum == {e})" for e in events)
-
-    if det_num is not None:
-        cut_str = f"(DetNum == {det_num}) & ({cut_str})"
-
-    return cut_str
 
 
 # ============================================================
@@ -174,7 +147,7 @@ def get_event_traces(
 def get_traces_for_events(
     file_path: str,
     events: int | List[int],
-    det_num: int = None
+    dets: int | List[int] = None
 ) -> Dict[int, Dict[str, np.ndarray]]:
     """
     Load TES traces for multiple events, grouped by EventNum.
@@ -187,10 +160,7 @@ def get_traces_for_events(
         plt.plot(traces[0])  # Plot first trace
         plt.title(f"Trace for Channel {data["ChanName"][0]}, Event {data["EventNum"][0]}")
     """
-    if isinstance(events, int):
-        events = [events]
-
-    cut = build_cut_string(events, det_num)
+    cut = build_cut_string(events, dets)
     
     # Use CDataFrame to filter the tree by event and detector
     data = CDataFrame('G4SimDir/g4dmcTES', file_path).Filter(cut)
