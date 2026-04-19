@@ -17,6 +17,7 @@ from .dmc_output_access import (
 from .tes_trace_viewer import (
     get_event_traces,
     get_traces_for_events,
+    get_trace_t_y,
     plot_event_all_channels_overlay,
     plot_traces_individually,
     build_cut_string,
@@ -46,6 +47,7 @@ __all__ = [
     "get_g4dmcTES_summary",
     "get_event_traces",
     "get_traces_for_events",
+    "get_trace_t_y",
     "plot_event_all_channels_overlay",
     "plot_traces_individually",
     "build_cut_string",
