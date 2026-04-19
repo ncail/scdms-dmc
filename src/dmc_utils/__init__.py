@@ -1,5 +1,6 @@
 from .dmc_output_access import (
     print_branch_report,
+    build_cut_string,
     get_tree,
     get_tree_arrays,
     get_mcevent_tree,
@@ -20,7 +21,6 @@ from .tes_trace_viewer import (
     get_trace_t_y,
     plot_event_all_channels_overlay,
     plot_traces_individually,
-    build_cut_string,
     normalize_traces,
     flip_traces,
     baseline_correct
