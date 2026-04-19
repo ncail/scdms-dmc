@@ -53,6 +53,7 @@ import numpy as np
 
 # Root file handling
 import uproot
+from cats.cdataframe import CDataFrame
 
 # For providing default keys
 from collections import defaultdict
@@ -131,6 +132,8 @@ def get_event_traces(
 
     Returns grouped channel data for plotting.
 
+    **Note: does not leverage CDataFrame. Prefer to use get_traces_for_event() which is more robust.**
+
     Example:
         data = get_event_traces("my_sim_output.root", event_num=101, det_num=1)
         first_chan_trace = data["Trace"][0]
@@ -179,17 +182,39 @@ def get_traces_for_events(
     Example:
         event_nums = [101, 102, 103]
         data = get_traces_for_events("my_sim_output.root", event_nums, det_num=1)
-        # data is a dict: {101: {"Trace": [...], "ChanNum": [...], ...}, 102: {...}, ...}
+        # data is a dict of NumPy arrays, aligned by row: {"Trace": [...], "ChanNum": [...], ...}
+        traces = data["Trace"]
+        plt.plot(traces[0])  # Plot first trace
+        plt.title(f"Trace for Channel {data["ChanName"][0]}, Event {data["EventNum"][0]}")
     """
     if isinstance(events, int):
         events = [events]
 
-    all_data = {}
+    cut = build_cut_string(events, det_num)
+    
+    # Use CDataFrame to filter the tree by event and detector
+    data = CDataFrame('G4SimDir/g4dmcTES', file_path).Filter(cut)
 
-    for evt in events:
-        all_data[evt] = get_event_traces(file_path, evt, det_num=det_num)
+    # Organize into a dictionary
+    event_num   = data.AsNumpy(['EventNum'])['EventNum']
+    det         = data.AsNumpy(['DetNum'])['DetNum']
+    chan_num    = data.AsNumpy(['ChanNum'])['ChanNum']
+    chan_name   = data.AsNumpy(['ChanName'])['ChanName']
+    trace       = data.AsNumpy(['Trace'])['Trace']
+    t0          = data.AsNumpy(['T0'])['T0']
+    bin_width   = data.AsNumpy(['BinWidth'])['BinWidth']
 
-    return all_data
+    data_dict = {
+        "EventNum": event_num,
+        "DetNum": det,
+        "ChanNum": chan_num,
+        "ChanName": chan_name,
+        "Trace": trace,
+        "T0": t0,
+        "BinWidth": bin_width
+    }
+
+    return data_dict
 
 
 def normalize_traces(
@@ -246,7 +271,7 @@ def baseline_correct(trace, n=500):
 # PLOTTING LAYER
 # ============================================================
 
-def _get_trace_t_y(
+def get_trace_t_y(
     trace: np.ndarray,
     dt: float,
     flip: bool = False,
@@ -326,7 +351,7 @@ def plot_event_all_channels_overlay(
             print(f"Skipping Chan {chan} (all NaN)")
             continue
 
-        t, y = _get_trace_t_y(trace, dt, flip=flip, normalize=normalize)
+        t, y = get_trace_t_y(trace, dt, flip=flip, normalize=normalize)
 
         ax.plot(t, y, linewidth=1, label=f"Channel {chan}")
 
@@ -404,7 +429,7 @@ def plot_traces_individually(
             print(f"Skipping Chan {chan} (all NaN)")
             continue
 
-        t, y = _get_trace_t_y(trace, dt, flip=flip, normalize=normalize)
+        t, y = get_trace_t_y(trace, dt, flip=flip, normalize=normalize)
 
         fig, ax = plt.subplots(figsize=(8,4))
 
